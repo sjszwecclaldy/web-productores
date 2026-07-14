@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Environment & secrets — cualquier carpeta del monorepo
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+backend/.env
+agente-sincronizacion/.env
+frontend/.env
+
+# Build output
+dist/
+build/
+*.egg-info/
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
