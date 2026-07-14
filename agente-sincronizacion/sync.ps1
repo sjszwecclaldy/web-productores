@@ -1,4 +1,4 @@
-# Agente de sincronización SAP Business One → Backend Render
+﻿# Agente de sincronizacion SAP Business One -> Backend Render
 # Compatible con Windows PowerShell 5.1 (sin instalaciones adicionales)
 
 $ErrorActionPreference = 'Stop'
@@ -13,6 +13,8 @@ $SelectFields = @(
     'U_FPD', 'U_Casein', 'U_Urea', 'U_Remarks'
 )
 $SelectClause = ($SelectFields -join ',')
+
+$Script:SapCookieContainer = New-Object System.Net.CookieContainer
 
 function Write-Log {
     param(
@@ -107,6 +109,52 @@ function Invoke-BackendJsonPost {
     return Invoke-RestMethod -Uri $Url -Method Post -Headers $Headers -Body $bodyBytes -ContentType 'application/json; charset=utf-8'
 }
 
+function Invoke-SapRequest {
+    param(
+        [string]$Method,
+        [string]$Url,
+        [string]$JsonBody = $null
+    )
+
+    try {
+        $req = [System.Net.HttpWebRequest]::Create($Url)
+        $req.Method = $Method
+        $req.CookieContainer = $Script:SapCookieContainer
+
+        if ($null -ne $JsonBody -and $JsonBody -ne '') {
+            $req.ContentType = 'application/json'
+            $utf8 = New-Object System.Text.UTF8Encoding $false
+            $bodyBytes = $utf8.GetBytes($JsonBody)
+            $req.ContentLength = $bodyBytes.Length
+            $stream = $req.GetRequestStream()
+            $stream.Write($bodyBytes, 0, $bodyBytes.Length)
+            $stream.Close()
+        }
+
+        $response = $req.GetResponse()
+        $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
+        $text = $reader.ReadToEnd()
+        $reader.Close()
+        $response.Close()
+        return $text
+    }
+    catch [System.Net.WebException] {
+        $detail = $_.Exception.Message
+        if ($null -ne $_.Exception.Response) {
+            $errStream = $_.Exception.Response.GetResponseStream()
+            if ($null -ne $errStream) {
+                $errReader = New-Object System.IO.StreamReader($errStream)
+                $errBody = $errReader.ReadToEnd()
+                $errReader.Close()
+                if ($null -ne $errBody -and $errBody -ne '') {
+                    $detail = "$detail - $errBody"
+                }
+            }
+        }
+        throw New-Object System.Exception($detail)
+    }
+}
+
 function Transform-Record {
     param($Row)
 
@@ -146,7 +194,7 @@ function Get-SyncFromDate {
     $syncStatusUrl = "$backendUrl/internal/sync-status"
     $headers = Get-BackendHeaders -Config $Config
 
-    Write-Log 'Consultando sync-status en backend…'
+    Write-Log 'Consultando sync-status en backend...'
     $data = Invoke-RestMethod -Uri $syncStatusUrl -Method Get -Headers $headers
     $lastDate = $data.last_collection_date
 
@@ -154,17 +202,16 @@ function Get-SyncFromDate {
         $overlapDays = [int](Get-ConfigValue -Config $Config -Name 'SYNC_OVERLAP_DAYS' -Default '7')
         $dt = [datetime]::ParseExact($lastDate, 'yyyy-MM-dd', $null)
         $fromDate = $dt.AddDays(-1 * $overlapDays).ToString('yyyy-MM-dd')
-        Write-Log "Última fecha sincronizada: $lastDate — incremental desde $fromDate (-$overlapDays días overlap)"
+        Write-Log "Ultima fecha sincronizada: $lastDate - incremental desde $fromDate (-$overlapDays dias overlap)"
         return $fromDate
     }
 
-    Write-Log 'Sin datos previos — corrida histórica completa'
+    Write-Log 'Sin datos previos - corrida historica completa'
     return '2000-01-01'
 }
 
 function Get-SapRecords {
     param(
-        [Microsoft.PowerShell.Commands.WebRequestSession]$SapSession,
         [string]$SapBaseUrl,
         [string]$FromDate
     )
@@ -180,8 +227,7 @@ function Get-SapRecords {
     while ($null -ne $url -and $url -ne '') {
         $page++
         if ($firstRequest) {
-            Write-Log "SAP página $page : $url"
-            $resp = Invoke-RestMethod -Uri $url -Method Get -WebSession $SapSession
+            Write-Log "SAP pagina $page : $url"
             $firstRequest = $false
         }
         else {
@@ -189,9 +235,11 @@ function Get-SapRecords {
             if ($displayUrl.Length -gt 120) {
                 $displayUrl = $displayUrl.Substring(0, 120)
             }
-            Write-Log "SAP página $page : $displayUrl"
-            $resp = Invoke-RestMethod -Uri $url -Method Get -WebSession $SapSession
+            Write-Log "SAP pagina $page : $displayUrl"
         }
+
+        $responseText = Invoke-SapRequest -Method 'GET' -Url $url
+        $resp = $responseText | ConvertFrom-Json
 
         $batch = @()
         if ($null -ne $resp.value) {
@@ -202,7 +250,7 @@ function Get-SapRecords {
             [void]$records.Add((Transform-Record -Row $row))
         }
 
-        Write-Log "  → $($batch.Count) registros (acumulado: $($records.Count))"
+        Write-Log "  -> $($batch.Count) registros (acumulado: $($records.Count))"
 
         $nextLink = $null
         if ($null -ne $resp.'@odata.nextLink') {
@@ -250,7 +298,7 @@ function Push-ToBackend {
         }
         $batch = @($Records[$i..($end - 1)])
 
-        Write-Log "Enviando lote $($i + 1)–$end de $total al backend…"
+        Write-Log "Enviando lote $($i + 1)-$end de $total al backend..."
 
         $jsonBody = ConvertTo-JsonArray -Items $batch
         $result = Invoke-BackendJsonPost -Url $ingestUrl -Headers $headers -JsonBody $jsonBody
@@ -306,34 +354,27 @@ function Invoke-SapLogin {
         Password  = (Get-ConfigValue -Config $Config -Name 'SAP_PASSWORD' -Required $true)
     }
 
-    Write-Log 'Login SAP Service Layer…'
-    $session = $null
+    Write-Log 'Login SAP Service Layer...'
     $loginJson = $loginPayload | ConvertTo-Json -Compress
-    Invoke-RestMethod -Uri $loginUrl -Method Post -Body $loginJson -ContentType 'application/json' -SessionVariable session | Out-Null
-    Write-Log 'Sesión SAP OK'
+    Invoke-SapRequest -Method 'POST' -Url $loginUrl -JsonBody $loginJson | Out-Null
+    Write-Log 'Sesion SAP OK'
 
-    return @{
-        Session = $session
-        BaseUrl = $baseUrl
-    }
+    return $baseUrl
 }
 
 function Invoke-SapLogout {
-    param(
-        [Microsoft.PowerShell.Commands.WebRequestSession]$SapSession,
-        [string]$SapBaseUrl
-    )
+    param([string]$SapBaseUrl)
 
     try {
         $logoutUrl = "$($SapBaseUrl.TrimEnd('/'))/Logout"
-        Invoke-RestMethod -Uri $logoutUrl -Method Post -WebSession $SapSession | Out-Null
+        Invoke-SapRequest -Method 'POST' -Url $logoutUrl | Out-Null
     }
     catch {
         # best-effort
     }
 }
 
-# ── Main ─────────────────────────────────────────────────────────────────────
+# -- Main ---------------------------------------------------------------------
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
@@ -345,24 +386,21 @@ if ($verifySsl -ne 'true') {
 }
 
 $startedAt = Get-Date
-$sapSession = $null
 $sapBaseUrl = $null
 $recordsFetched = 0
 $recordsUpserted = 0
 $status = 'ok'
 $errorMessage = $null
 
-Write-Log '=== Inicio sincronización CALIDAD_COMPOSICION ==='
+Write-Log '=== Inicio sincronizacion CALIDAD_COMPOSICION ==='
 
 try {
-    $sapLogin = Invoke-SapLogin -Config $config
-    $sapSession = $sapLogin.Session
-    $sapBaseUrl = $sapLogin.BaseUrl
+    $sapBaseUrl = Invoke-SapLogin -Config $config
 
     $fromDate = Get-SyncFromDate -Config $config
     Write-Log "Fecha de inicio del sync: $fromDate"
 
-    $records = Get-SapRecords -SapSession $sapSession -SapBaseUrl $sapBaseUrl -FromDate $fromDate
+    $records = Get-SapRecords -SapBaseUrl $sapBaseUrl -FromDate $fromDate
     $recordsFetched = $records.Count
     Write-Log "Total registros obtenidos de SAP: $recordsFetched"
 
@@ -371,7 +409,7 @@ try {
         $recordsUpserted = [int]$pushResult.inserted + [int]$pushResult.updated
         $elapsed = ((Get-Date) - $startedAt).TotalSeconds
         $elapsedFormatted = '{0:N1}' -f $elapsed
-        Write-Log "=== Sincronización OK — insertados: $($pushResult.inserted), actualizados: $($pushResult.updated), tiempo: ${elapsedFormatted}s ==="
+        Write-Log "=== Sincronizacion OK - insertados: $($pushResult.inserted), actualizados: $($pushResult.updated), tiempo: ${elapsedFormatted}s ==="
     }
     else {
         Write-Log 'Nada que sincronizar.'
@@ -381,7 +419,7 @@ catch {
     $status = 'error'
     $errorMessage = $_.Exception.Message
     if ($null -ne $_.ErrorDetails -and $null -ne $_.ErrorDetails.Message -and $_.ErrorDetails.Message -ne '') {
-        $errorMessage = "$errorMessage — $($_.ErrorDetails.Message)"
+        $errorMessage = "$errorMessage - $($_.ErrorDetails.Message)"
     }
     Write-Log $errorMessage 'ERROR'
 }
@@ -394,8 +432,8 @@ finally {
         Write-Log "No se pudo registrar sync_log: $($_.Exception.Message)" 'ERROR'
     }
 
-    if ($null -ne $sapSession -and $null -ne $sapBaseUrl) {
-        Invoke-SapLogout -SapSession $sapSession -SapBaseUrl $sapBaseUrl
+    if ($null -ne $sapBaseUrl) {
+        Invoke-SapLogout -SapBaseUrl $sapBaseUrl
     }
 }
 
