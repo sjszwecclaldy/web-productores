@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
 function generateActivationCode() {
-  return crypto.randomBytes(4).toString('hex').toUpperCase();
+  return crypto.randomBytes(8).toString('hex').toUpperCase();
 }
 
 function generateResetToken() {

@@ -71,6 +71,33 @@ router.get('/pending-activations', async (_req, res) => {
   }
 });
 
+router.post('/sync-log', async (req, res) => {
+  const { records_fetched, records_upserted, status, error_message, started_at } = req.body;
+
+  if (!status || !['ok', 'error'].includes(status)) {
+    return res.status(400).json({ error: 'status inválido' });
+  }
+
+  try {
+    const { rows } = await query(
+      `INSERT INTO sync_log (started_at, finished_at, records_fetched, records_upserted, status, error_message)
+       VALUES ($1, NOW(), $2, $3, $4, $5)
+       RETURNING id`,
+      [
+        started_at ? new Date(started_at) : new Date(),
+        records_fetched ?? 0,
+        records_upserted ?? 0,
+        status,
+        error_message ?? null,
+      ]
+    );
+    res.json({ id: rows[0].id });
+  } catch (err) {
+    console.error('sync-log error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
 router.post('/ingest/calidad-composicion', async (req, res) => {
   const records = req.body;
 
@@ -79,16 +106,8 @@ router.post('/ingest/calidad-composicion', async (req, res) => {
   }
 
   const client = await pool.connect();
-  let syncLogId;
 
   try {
-    const logResult = await client.query(
-      `INSERT INTO sync_log (started_at, status, records_fetched)
-       VALUES (NOW(), 'ok', $1) RETURNING id`,
-      [records.length]
-    );
-    syncLogId = logResult.rows[0].id;
-
     await client.query('BEGIN');
 
     let inserted = 0;
@@ -157,22 +176,9 @@ router.post('/ingest/calidad-composicion', async (req, res) => {
 
     await client.query('COMMIT');
 
-    await client.query(
-      `UPDATE sync_log
-       SET finished_at = NOW(), records_upserted = $1, status = 'ok'
-       WHERE id = $2`,
-      [inserted + updated, syncLogId]
-    );
-
     res.json({ inserted, updated });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
-    if (syncLogId) {
-      await client.query(
-        `UPDATE sync_log SET finished_at = NOW(), status = 'error', error_message = $1 WHERE id = $2`,
-        [err.message, syncLogId]
-      );
-    }
     console.error('ingest error:', err);
     res.status(500).json({ error: 'Error en ingest', detail: err.message });
   } finally {

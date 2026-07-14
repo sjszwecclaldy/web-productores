@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const { query } = require('../db');
 const { generateResetToken } = require('../utils/tokens');
 const { sendPasswordResetEmail } = require('../utils/email');
@@ -9,11 +10,21 @@ const router = express.Router();
 const SALT_ROUNDS = 10;
 const JWT_EXPIRY = '7d';
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({ error: 'Demasiados intentos. Intente nuevamente más tarde.' });
+  },
+});
+
 function validatePassword(password) {
   return typeof password === 'string' && password.length >= 8;
 }
 
-router.post('/activate', async (req, res) => {
+router.post('/activate', authLimiter, async (req, res) => {
   const { card_code, activation_code, email, password } = req.body;
 
   if (!card_code || !activation_code || !email || !password) {
@@ -34,8 +45,8 @@ router.post('/activate', async (req, res) => {
       [normalizedCode]
     );
 
-    if (rows.length === 0) {
-      return res.status(400).json({ error: 'Código de productor inválido' });
+    if (rows.length === 0 || rows[0].activation_code !== normalizedActivation) {
+      return res.status(400).json({ error: 'Código de productor o de activación inválido' });
     }
 
     const productor = rows[0];
@@ -45,9 +56,6 @@ router.post('/activate', async (req, res) => {
     }
     if (productor.estado === 'deshabilitado') {
       return res.status(403).json({ error: 'Cuenta deshabilitada. Contacte a la empresa.' });
-    }
-    if (productor.activation_code !== normalizedActivation) {
-      return res.status(400).json({ error: 'Código de activación inválido' });
     }
     if (productor.activation_code_expira && new Date(productor.activation_code_expira) < new Date()) {
       return res.status(400).json({ error: 'Código de activación expirado. Solicite uno nuevo.' });
@@ -84,7 +92,7 @@ router.post('/activate', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {

@@ -6,11 +6,10 @@ Corre dentro de la red de la empresa (cron diario).
 Empuja datos por HTTPS saliente; no requiere puertos entrantes.
 """
 
-import json
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urljoin
 
 import requests
@@ -55,7 +54,7 @@ def env(name: str, required: bool = True) -> str:
     return value
 
 
-def sap_session() -> requests.Session:
+def sap_session() -> tuple[requests.Session, str]:
     base_url = env("SAP_BASE_URL").rstrip("/")
     verify = os.getenv("SAP_VERIFY_SSL", "false").lower() == "true"
 
@@ -98,8 +97,16 @@ def get_sync_from_date() -> str | None:
     last_date = data.get("last_collection_date")
 
     if last_date:
-        log.info("Última fecha sincronizada: %s — corrida incremental", last_date)
-        return last_date
+        overlap_days = int(os.getenv("SYNC_OVERLAP_DAYS", "7"))
+        dt = datetime.strptime(last_date, "%Y-%m-%d").date()
+        from_date = (dt - timedelta(days=overlap_days)).isoformat()
+        log.info(
+            "Última fecha sincronizada: %s — incremental desde %s (-%d días overlap)",
+            last_date,
+            from_date,
+            overlap_days,
+        )
+        return from_date
 
     log.info("Sin datos previos — corrida histórica completa")
     return "2000-01-01"
@@ -127,21 +134,24 @@ def transform_record(sap_row: dict) -> dict:
 
 def fetch_sap_records(session: requests.Session, base_url: str, from_date: str | None) -> list[dict]:
     records: list[dict] = []
-
+    url = f"{base_url}/sml.svc/CALIDAD_COMPOSICION"
+    params: dict[str, str] = {"$select": SELECT_CLAUSE}
     if from_date:
-        filter_expr = f"U_CollectionDate ge '{from_date}'"
-        url = (
-            f"{base_url}/sml.svc/CALIDAD_COMPOSICION"
-            f"?$select={SELECT_CLAUSE}&$filter={filter_expr}"
-        )
-    else:
-        url = f"{base_url}/sml.svc/CALIDAD_COMPOSICION?$select={SELECT_CLAUSE}"
+        params["$filter"] = f"U_CollectionDate ge '{from_date}'"
 
     page = 0
+    first_request = True
+
     while url:
         page += 1
-        log.info("SAP página %d: %s", page, url[:120])
-        resp = session.get(url, timeout=120)
+        if first_request:
+            log.info("SAP página %d: %s", page, url)
+            resp = session.get(url, params=params, timeout=120)
+            first_request = False
+        else:
+            log.info("SAP página %d: %s", page, url[:120])
+            resp = session.get(url, timeout=120)
+
         resp.raise_for_status()
         body = resp.json()
 
@@ -187,41 +197,79 @@ def push_to_backend(records: list[dict]) -> tuple[int, int]:
     return total_inserted, total_updated
 
 
+def post_sync_log(
+    started_at: datetime,
+    records_fetched: int,
+    records_upserted: int,
+    status: str,
+    error_message: str | None = None,
+) -> None:
+    backend_url = env("BACKEND_URL").rstrip("/")
+    sync_log_url = f"{backend_url}/internal/sync-log"
+    payload = {
+        "started_at": started_at.isoformat(),
+        "records_fetched": records_fetched,
+        "records_upserted": records_upserted,
+        "status": status,
+        "error_message": error_message,
+    }
+    resp = requests.post(sync_log_url, headers=backend_headers(), json=payload, timeout=60)
+    resp.raise_for_status()
+
+
 def main() -> None:
-    started = datetime.now()
+    started_at = datetime.now()
     log.info("=== Inicio sincronización CALIDAD_COMPOSICION ===")
 
-    session, base_url = sap_session()
-    from_date = get_sync_from_date()
+    session: requests.Session | None = None
+    base_url: str | None = None
+    records_fetched = 0
+    records_upserted = 0
+    status = "ok"
+    error_message: str | None = None
 
     try:
+        session, base_url = sap_session()
+        from_date = get_sync_from_date()
         records = fetch_sap_records(session, base_url, from_date)
-        log.info("Total registros obtenidos de SAP: %d", len(records))
+        records_fetched = len(records)
+        log.info("Total registros obtenidos de SAP: %d", records_fetched)
 
-        if not records:
+        if records:
+            inserted, updated = push_to_backend(records)
+            records_upserted = inserted + updated
+            elapsed = (datetime.now() - started_at).total_seconds()
+            log.info(
+                "=== Sincronización OK — insertados: %d, actualizados: %d, tiempo: %.1fs ===",
+                inserted,
+                updated,
+                elapsed,
+            )
+        else:
             log.info("Nada que sincronizar.")
-            return
-
-        inserted, updated = push_to_backend(records)
-        elapsed = (datetime.now() - started).total_seconds()
-        log.info(
-            "=== Sincronización OK — insertados: %d, actualizados: %d, tiempo: %.1fs ===",
-            inserted,
-            updated,
-            elapsed,
-        )
     except requests.HTTPError as exc:
-        log.error("Error HTTP: %s — %s", exc, exc.response.text if exc.response else "")
-        sys.exit(1)
+        status = "error"
+        detail = exc.response.text if exc.response is not None else ""
+        error_message = f"{exc} — {detail}".strip(" —")
+        log.error("Error HTTP: %s", error_message)
     except Exception as exc:
+        status = "error"
+        error_message = str(exc)
         log.error("Error: %s", exc)
-        sys.exit(1)
     finally:
         try:
-            logout_url = f"{base_url}/Logout"
-            session.post(logout_url, timeout=30)
-        except Exception:
-            pass
+            post_sync_log(started_at, records_fetched, records_upserted, status, error_message)
+        except Exception as log_exc:
+            log.error("No se pudo registrar sync_log: %s", log_exc)
+
+        if session is not None and base_url is not None:
+            try:
+                session.post(f"{base_url}/Logout", timeout=30)
+            except Exception:
+                pass
+
+    if status == "error":
+        sys.exit(1)
 
 
 if __name__ == "__main__":

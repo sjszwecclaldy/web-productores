@@ -11,7 +11,7 @@ const internalRoutes = require('./routes/internal');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const requiredEnv = ['DATABASE_URL', 'JWT_SECRET', 'INGEST_API_KEY'];
+const requiredEnv = ['DATABASE_URL', 'JWT_SECRET', 'INGEST_API_KEY', 'FRONTEND_URL'];
 for (const key of requiredEnv) {
   if (!process.env[key]) {
     console.error(`Variable de entorno requerida: ${key}`);
@@ -19,9 +19,10 @@ for (const key of requiredEnv) {
   }
 }
 
+const allowedOrigins = process.env.FRONTEND_URL.split(',').map((s) => s.trim()).filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  credentials: true,
+  origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
 }));
 app.use(express.json({ limit: '10mb' }));
 
