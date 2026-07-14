@@ -132,6 +132,22 @@ function Invoke-SapRequest {
         }
 
         $response = $req.GetResponse()
+
+        $host = ([Uri]$Url).Host
+        $sc = $null
+        try { $sc = $response.Headers.GetValues('Set-Cookie') } catch { $sc = $null }
+        if ($null -ne $sc) {
+            foreach ($h in $sc) {
+                $pair = $h.Split(';')[0].Trim()
+                $ix = $pair.IndexOf('=')
+                if ($ix -gt 0) {
+                    $cn = $pair.Substring(0, $ix)
+                    $cv = $pair.Substring($ix + 1)
+                    try { $Script:SapCookieContainer.Add((New-Object System.Net.Cookie($cn, $cv, '/', $host))) } catch { }
+                }
+            }
+        }
+
         $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
         $text = $reader.ReadToEnd()
         $reader.Close()
