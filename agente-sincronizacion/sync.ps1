@@ -91,8 +91,7 @@ function ConvertTo-JsonArray {
 function Get-BackendHeaders {
     param([hashtable]$Config)
     return @{
-        'X-Api-Key'    = (Get-ConfigValue -Config $Config -Name 'INGEST_API_KEY' -Required $true)
-        'Content-Type' = 'application/json; charset=utf-8'
+        'X-Api-Key' = (Get-ConfigValue -Config $Config -Name 'INGEST_API_KEY' -Required $true)
     }
 }
 

@@ -59,7 +59,7 @@ El script escribe logs en consola y en `sync.log` (misma carpeta).
    - **Programa:** `powershell.exe`
    - **Argumentos:** `-NoProfile -ExecutionPolicy Bypass -File "C:\ruta\agente-sincronizacion\sync.ps1"`
    - **Iniciar en:** `C:\ruta\agente-sincronizacion`
-4. Opcional: en **Configuración**, marcar "Ejecutar aunque el usuario no haya iniciado sesión" con una cuenta de servicio.
+4. En **Configuración**, marcar **"Ejecutar aunque el usuario no haya iniciado sesión"** (necesario para la corrida diaria desatendida en un servidor 24/7) y configurar una cuenta de servicio con permisos sobre la carpeta del agente.
 
 ---
 
