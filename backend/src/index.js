@@ -9,6 +9,7 @@ const calidadRoutes = require('./routes/calidad');
 const internalRoutes = require('./routes/internal');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 const requiredEnv = ['DATABASE_URL', 'JWT_SECRET', 'INGEST_API_KEY', 'FRONTEND_URL'];
