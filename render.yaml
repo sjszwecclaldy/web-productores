@@ -25,7 +25,7 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: DATABASE_SSL
-        value: "false"
+        value: "true"
       - key: JWT_SECRET
         generateValue: true
       - key: INGEST_API_KEY
