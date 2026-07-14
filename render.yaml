@@ -14,7 +14,7 @@ services:
   - type: web
     name: web-productores-api
     runtime: node
-    plan: starter
+    plan: free
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
