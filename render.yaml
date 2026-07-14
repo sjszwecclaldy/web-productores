@@ -1,0 +1,57 @@
+# Render Blueprint — Portal Web Productores (MVP)
+#
+# Aplicar: Render Dashboard → New → Blueprint → conectar repo web-productores
+#
+# IMPORTANTE al sincronizar:
+# 1. Elegir la MISMA región que la base PostgreSQL existente.
+# 2. Cuando pida DATABASE_URL, usar "Add from database" y seleccionar tu Postgres.
+# 3. Copiar INGEST_API_KEY (Environment del backend) al .env del agente en la empresa.
+# 4. Si el primer build del frontend falla por VITE_API_URL, redeployar frontend
+#    una vez que el backend tenga URL asignada.
+
+services:
+  # ── Backend API ──────────────────────────────────────────────────────────
+  - type: web
+    name: web-productores-api
+    runtime: node
+    plan: starter
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "false"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: INGEST_API_KEY
+        generateValue: true
+      - key: FRONTEND_URL
+        fromService:
+          name: web-productores
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+
+  # ── Frontend SPA ─────────────────────────────────────────────────────────
+  - type: web
+    name: web-productores
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: VITE_API_URL
+        fromService:
+          name: web-productores-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

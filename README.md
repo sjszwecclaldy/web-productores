@@ -65,10 +65,23 @@ npm run dev
 
 ### Deploy en Render
 
+**Opción recomendada — Blueprint (`render.yaml` en la raíz del repo):**
+
+1. Render Dashboard → **New** → **Blueprint** → conectar repo `web-productores`.
+2. Misma **región** que la base PostgreSQL existente.
+3. Al sincronizar, vincular `DATABASE_URL` con **Add from database**.
+4. Anotar `INGEST_API_KEY` del backend → copiar al `.env` del agente.
+5. Verificar `/health` y redeployar frontend si el primer build falló por URLs cruzadas.
+
+**Opción manual** (mismos valores que el blueprint):
+
 - **Root Directory:** `backend`
 - **Build Command:** `npm install`
 - **Start Command:** `npm start`
-- Conectar la base PostgreSQL existente y setear `DATABASE_SSL=true`.
+- Conectar la base PostgreSQL existente y setear `DATABASE_SSL=false`.
+- Static Site frontend: build `npm install && npm run build`, publish `dist`, rewrite `/*` → `/index.html`.
+
+Script de verificación post-deploy: `scripts/verify-deploy.ps1`
 
 ---
 
