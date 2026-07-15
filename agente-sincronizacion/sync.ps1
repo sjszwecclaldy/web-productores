@@ -27,6 +27,46 @@ function Write-Log {
     Add-Content -Path $LogFile -Value $line -Encoding UTF8
 }
 
+function Invoke-WithRetry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$Action,
+        [int]$MaxAttempts = 4,
+        [int]$DelaySeconds = 5
+    )
+
+    $attempt = 0
+    while ($true) {
+        $attempt++
+        try {
+            return & $Action
+        }
+        catch {
+            $retryable = $false
+            $resp = $_.Exception.Response
+            if ($null -eq $resp) {
+                $retryable = $true
+            }
+            else {
+                try {
+                    $code = [int]$resp.StatusCode
+                    if ($code -ge 500) { $retryable = $true }
+                }
+                catch {
+                    $retryable = $true
+                }
+            }
+
+            if (-not $retryable -or $attempt -ge $MaxAttempts) {
+                throw
+            }
+
+            Write-Log "Intento $attempt fallo (reintentable): $($_.Exception.Message). Reintento en $DelaySeconds s..." 'WARN'
+            Start-Sleep -Seconds $DelaySeconds
+        }
+    }
+}
+
 function Read-EnvFile {
     param([string]$Path)
 
@@ -106,7 +146,7 @@ function Invoke-BackendJsonPost {
 
     $utf8 = New-Object System.Text.UTF8Encoding $false
     $bodyBytes = $utf8.GetBytes($JsonBody)
-    return Invoke-RestMethod -Uri $Url -Method Post -Headers $Headers -Body $bodyBytes -ContentType 'application/json; charset=utf-8'
+    return Invoke-WithRetry { Invoke-RestMethod -Uri $Url -Method Post -Headers $Headers -Body $bodyBytes -ContentType 'application/json; charset=utf-8' -TimeoutSec 120 }
 }
 
 function Invoke-SapRequest {
@@ -212,7 +252,7 @@ function Get-SyncFromDate {
     $headers = Get-BackendHeaders -Config $Config
 
     Write-Log 'Consultando sync-status en backend...'
-    $data = Invoke-RestMethod -Uri $syncStatusUrl -Method Get -Headers $headers
+    $data = Invoke-WithRetry { Invoke-RestMethod -Uri $syncStatusUrl -Method Get -Headers $headers -TimeoutSec 120 }
     $lastDate = $data.last_collection_date
 
     if ($null -ne $lastDate -and "$lastDate".Trim() -ne '') {
