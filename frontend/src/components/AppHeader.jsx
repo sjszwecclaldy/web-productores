@@ -20,6 +20,7 @@ export default function AppHeader({ title }) {
       <nav className="nav">
         <NavLink to="/" end className={linkClass}>Calidad</NavLink>
         <NavLink to="/remisiones" className={linkClass}>Remisiones</NavLink>
+        <NavLink to="/liquidaciones" className={linkClass}>Liquidaciones</NavLink>
       </nav>
       <button type="button" className="btn btn-ghost" onClick={logout}>
         Salir
