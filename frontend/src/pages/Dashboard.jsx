@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
+import { avgCalidadByDate, dateDaysAgo, filterLastDays } from '../chartUtils';
 import { fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
+import CalidadLineChart from '../components/CalidadLineChart';
+import ChartPanel from '../components/ChartPanel';
+import QualityGauge from '../components/QualityGauge';
 
 const METRICS = [
   { key: 'fat', label: 'Grasa %' },
@@ -47,6 +51,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [resumen, setResumen] = useState(null);
   const [registros, setRegistros] = useState([]);
+  const [chartRegistros, setChartRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState('');
@@ -55,6 +60,12 @@ export default function Dashboard() {
   async function loadResumen() {
     const data = await api('/api/calidad-composicion/resumen');
     setResumen(data);
+  }
+
+  async function loadChartRegistros() {
+    const from = dateDaysAgo(90);
+    const data = await api(`/api/calidad-composicion?from=${from}`);
+    setChartRegistros(data.data);
   }
 
   async function loadRegistros() {
@@ -69,7 +80,7 @@ export default function Dashboard() {
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadResumen(), loadRegistros()]);
+        await Promise.all([loadResumen(), loadRegistros(), loadChartRegistros()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -101,6 +112,9 @@ export default function Dashboard() {
     return <div className="loading">Cargando…</div>;
   }
 
+  const calidadChart = filterLastDays(avgCalidadByDate(chartRegistros), 90);
+  const ultimo = resumen?.ultimo;
+
   return (
     <div className="layout">
       <AppHeader />
@@ -122,6 +136,20 @@ export default function Dashboard() {
                 : null
             }
           />
+        </div>
+
+        <div className="charts-grid">
+          <ChartPanel title="Evolucion grasa y proteina (90 dias)">
+            <CalidadLineChart data={calidadChart} />
+          </ChartPanel>
+          <ChartPanel title="Ultima muestra — medidores">
+            <div className="gauges-row">
+              <QualityGauge label="Grasa" value={ultimo?.fat} max={6} />
+              <QualityGauge label="Proteina" value={ultimo?.protein} max={5} />
+              <QualityGauge label="Lactosa" value={ultimo?.lactose} max={6} />
+              <QualityGauge label="Solidos totales" value={ultimo?.ts} max={14} />
+            </div>
+          </ChartPanel>
         </div>
 
         <form className="filters" onSubmit={handleFilter}>

@@ -1,13 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
+import { dateDaysAgo, filterLastDays, groupSumByDate } from '../chartUtils';
 import { fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
+import ChartPanel from '../components/ChartPanel';
+import LitrosBarChart from '../components/LitrosBarChart';
 
 export default function Remisiones() {
   const navigate = useNavigate();
   const [resumen, setResumen] = useState(null);
   const [registros, setRegistros] = useState([]);
+  const [chartRegistros, setChartRegistros] = useState([]);
+  const [chartDays, setChartDays] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState('');
@@ -16,6 +21,12 @@ export default function Remisiones() {
   async function loadResumen() {
     const data = await api('/api/remisiones/resumen');
     setResumen(data);
+  }
+
+  async function loadChartRegistros() {
+    const from = dateDaysAgo(90);
+    const data = await api(`/api/remisiones?from=${from}`);
+    setChartRegistros(data.data);
   }
 
   async function loadRegistros() {
@@ -30,7 +41,7 @@ export default function Remisiones() {
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadResumen(), loadRegistros()]);
+        await Promise.all([loadResumen(), loadRegistros(), loadChartRegistros()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -57,6 +68,11 @@ export default function Remisiones() {
       setLoading(false);
     }
   }
+
+  const chartLitros = useMemo(
+    () => filterLastDays(groupSumByDate(chartRegistros, 'doc_date', 'quantity'), chartDays),
+    [chartRegistros, chartDays]
+  );
 
   if (loading && !resumen) {
     return <div className="loading">Cargando…</div>;
@@ -105,6 +121,26 @@ export default function Remisiones() {
             )}
           </div>
         </div>
+
+        <ChartPanel
+          title="Litros entregados por dia"
+          actions={
+            <div className="period-toggle">
+              {[14, 30, 90].map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  className={`period-toggle__btn${chartDays === days ? ' active' : ''}`}
+                  onClick={() => setChartDays(days)}
+                >
+                  {days} dias
+                </button>
+              ))}
+            </div>
+          }
+        >
+          <LitrosBarChart data={chartLitros} />
+        </ChartPanel>
 
         <form className="filters" onSubmit={handleFilter}>
           <div className="form-group">

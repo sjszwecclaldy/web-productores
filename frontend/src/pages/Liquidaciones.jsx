@@ -1,13 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
+import { dateDaysAgo, groupDualByMonth } from '../chartUtils';
 import { fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
+import ChartPanel from '../components/ChartPanel';
+import MonthlyBarChart from '../components/MonthlyBarChart';
 
 export default function Liquidaciones() {
   const navigate = useNavigate();
   const [resumen, setResumen] = useState(null);
   const [registros, setRegistros] = useState([]);
+  const [chartRegistros, setChartRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState('');
@@ -16,6 +20,12 @@ export default function Liquidaciones() {
   async function loadResumen() {
     const data = await api('/api/liquidaciones/resumen');
     setResumen(data);
+  }
+
+  async function loadChartRegistros() {
+    const from = dateDaysAgo(365);
+    const data = await api(`/api/liquidaciones?from=${from}`);
+    setChartRegistros(data.data);
   }
 
   async function loadRegistros() {
@@ -30,7 +40,7 @@ export default function Liquidaciones() {
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadResumen(), loadRegistros()]);
+        await Promise.all([loadResumen(), loadRegistros(), loadChartRegistros()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -57,6 +67,11 @@ export default function Liquidaciones() {
       setLoading(false);
     }
   }
+
+  const chartMonthly = useMemo(
+    () => groupDualByMonth(chartRegistros, 'doc_date', 'total', 'cantidad', 'importe', 'litros'),
+    [chartRegistros]
+  );
 
   if (loading && !resumen) {
     return <div className="loading">Cargando…</div>;
@@ -107,6 +122,16 @@ export default function Liquidaciones() {
             )}
           </div>
         </div>
+
+        <ChartPanel title="Importe y litros por mes (ultimo ano)">
+          <MonthlyBarChart
+            data={chartMonthly}
+            bars={[
+              { key: 'importe', label: 'Importe', color: '#1a5c35' },
+              { key: 'litros', label: 'Litros', color: '#2d8c52' },
+            ]}
+          />
+        </ChartPanel>
 
         <form className="filters" onSubmit={handleFilter}>
           <div className="form-group">

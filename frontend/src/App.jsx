@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Activate from './pages/Activate';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Resumen from './pages/Resumen';
 import Dashboard from './pages/Dashboard';
 import Remisiones from './pages/Remisiones';
 import Liquidaciones from './pages/Liquidaciones';
@@ -47,6 +48,14 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         path="/"
+        element={
+          <PrivateRoute>
+            <Resumen />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/calidad"
         element={
           <PrivateRoute>
             <Dashboard />

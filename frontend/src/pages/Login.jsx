@@ -37,7 +37,8 @@ export default function Login() {
           Consultá la calidad de tu leche, entregas, liquidaciones y ajustes en un solo lugar.
         </p>
         <ul className="auth-hero-features">
-          <li>Calidad y composición</li>
+          <li>Resumen de produccion</li>
+          <li>Calidad y composicion</li>
           <li>Remisiones y entregas</li>
           <li>Liquidaciones mensuales</li>
           <li>Reliquidaciones</li>

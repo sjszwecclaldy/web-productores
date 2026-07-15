@@ -1,13 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
+import { CHART_COLORS, dateDaysAgo, groupSumByMonth } from '../chartUtils';
 import { fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
+import ChartPanel from '../components/ChartPanel';
+import MonthlyBarChart from '../components/MonthlyBarChart';
 
 export default function Reliquidaciones() {
   const navigate = useNavigate();
   const [resumen, setResumen] = useState(null);
   const [registros, setRegistros] = useState([]);
+  const [chartRegistros, setChartRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState('');
@@ -16,6 +20,12 @@ export default function Reliquidaciones() {
   async function loadResumen() {
     const data = await api('/api/reliquidaciones/resumen');
     setResumen(data);
+  }
+
+  async function loadChartRegistros() {
+    const from = dateDaysAgo(365);
+    const data = await api(`/api/reliquidaciones?from=${from}`);
+    setChartRegistros(data.data);
   }
 
   async function loadRegistros() {
@@ -30,7 +40,7 @@ export default function Reliquidaciones() {
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadResumen(), loadRegistros()]);
+        await Promise.all([loadResumen(), loadRegistros(), loadChartRegistros()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -57,6 +67,11 @@ export default function Reliquidaciones() {
       setLoading(false);
     }
   }
+
+  const chartMonthly = useMemo(() => {
+    const rows = groupSumByMonth(chartRegistros, 'doc_date', 'line_total');
+    return rows.map((r) => ({ ...r, importe: r.total }));
+  }, [chartRegistros]);
 
   if (loading && !resumen) {
     return <div className="loading">Cargando…</div>;
@@ -104,6 +119,13 @@ export default function Reliquidaciones() {
             )}
           </div>
         </div>
+
+        <ChartPanel title="Ajustes por mes (ultimo ano)">
+          <MonthlyBarChart
+            data={chartMonthly}
+            bars={[{ key: 'importe', label: 'Importe', color: CHART_COLORS.gold }]}
+          />
+        </ChartPanel>
 
         <form className="filters" onSubmit={handleFilter}>
           <div className="form-group">

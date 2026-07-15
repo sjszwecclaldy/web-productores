@@ -5,10 +5,12 @@ import {
   IconLiquidaciones,
   IconReliquidaciones,
   IconRemisiones,
+  IconResumen,
 } from './icons';
 
 const NAV_ITEMS = [
-  { to: '/', end: true, label: 'Calidad', Icon: IconCalidad },
+  { to: '/', end: true, label: 'Resumen', Icon: IconResumen },
+  { to: '/calidad', label: 'Calidad', Icon: IconCalidad },
   { to: '/remisiones', label: 'Remisiones', Icon: IconRemisiones },
   { to: '/liquidaciones', label: 'Liquidaciones', Icon: IconLiquidaciones },
   { to: '/reliquidaciones', label: 'Reliquidaciones', Icon: IconReliquidaciones },
