@@ -14,7 +14,7 @@ $SelectFields = @(
 )
 $SelectClause = ($SelectFields -join ',')
 
-$Script:SapCookieContainer = New-Object System.Net.CookieContainer
+$Script:SapCookies = [ordered]@{}
 
 function Write-Log {
     param(
@@ -116,59 +116,60 @@ function Invoke-SapRequest {
         [string]$JsonBody = $null
     )
 
-    try {
-        $req = [System.Net.HttpWebRequest]::Create($Url)
-        $req.Method = $Method
-        $req.CookieContainer = $Script:SapCookieContainer
+    $http = New-Object -ComObject WinHttp.WinHttpRequest.5.1
+    $http.Option(4) = 13056
+    $http.SetTimeouts(10000, 10000, 10000, 30000)
 
-        if ($null -ne $JsonBody -and $JsonBody -ne '') {
-            $req.ContentType = 'application/json'
-            $utf8 = New-Object System.Text.UTF8Encoding $false
-            $bodyBytes = $utf8.GetBytes($JsonBody)
-            $req.ContentLength = $bodyBytes.Length
-            $stream = $req.GetRequestStream()
-            $stream.Write($bodyBytes, 0, $bodyBytes.Length)
-            $stream.Close()
+    $http.Open($Method, $Url, $false)
+
+    if ($Script:SapCookies.Count -gt 0) {
+        $cookieParts = @()
+        foreach ($cookieName in $Script:SapCookies.Keys) {
+            $cookieParts += ($cookieName + '=' + $Script:SapCookies[$cookieName])
         }
+        $http.SetRequestHeader('Cookie', ($cookieParts -join '; '))
+    }
 
-        $response = $req.GetResponse()
+    if ($null -ne $JsonBody -and $JsonBody -ne '') {
+        $http.SetRequestHeader('Content-Type', 'application/json')
+    }
 
-        $host = ([Uri]$Url).Host
-        $sc = $null
-        try { $sc = $response.Headers.GetValues('Set-Cookie') } catch { $sc = $null }
-        if ($null -ne $sc) {
-            foreach ($h in $sc) {
-                $pair = $h.Split(';')[0].Trim()
+    try {
+        if ($null -ne $JsonBody -and $JsonBody -ne '') {
+            $http.Send($JsonBody)
+        }
+        else {
+            $http.Send()
+        }
+    }
+    catch {
+        throw New-Object System.Exception("WinHTTP connection error: $($_.Exception.Message)")
+    }
+
+    $allHeaders = $http.GetAllResponseHeaders()
+    if ($null -ne $allHeaders -and $allHeaders -ne '') {
+        $headerLines = $allHeaders -split "`r`n"
+        foreach ($headerLine in $headerLines) {
+            if ($headerLine -imatch '^Set-Cookie:\s*(.+)$') {
+                $cookiePart = $Matches[1]
+                $pair = $cookiePart.Split(';')[0].Trim()
                 $ix = $pair.IndexOf('=')
                 if ($ix -gt 0) {
                     $cn = $pair.Substring(0, $ix)
                     $cv = $pair.Substring($ix + 1)
-                    try { $Script:SapCookieContainer.Add((New-Object System.Net.Cookie($cn, $cv, '/', $host))) } catch { }
+                    $Script:SapCookies[$cn] = $cv
                 }
             }
         }
+    }
 
-        $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
-        $text = $reader.ReadToEnd()
-        $reader.Close()
-        $response.Close()
-        return $text
+    $statusCode = [int]$http.Status
+    if ($statusCode -ge 200 -and $statusCode -lt 300) {
+        return $http.ResponseText
     }
-    catch [System.Net.WebException] {
-        $detail = $_.Exception.Message
-        if ($null -ne $_.Exception.Response) {
-            $errStream = $_.Exception.Response.GetResponseStream()
-            if ($null -ne $errStream) {
-                $errReader = New-Object System.IO.StreamReader($errStream)
-                $errBody = $errReader.ReadToEnd()
-                $errReader.Close()
-                if ($null -ne $errBody -and $errBody -ne '') {
-                    $detail = "$detail - $errBody"
-                }
-            }
-        }
-        throw New-Object System.Exception($detail)
-    }
+
+    $detail = "HTTP $statusCode $($http.StatusText) - $($http.ResponseText)"
+    throw New-Object System.Exception($detail)
 }
 
 function Transform-Record {
