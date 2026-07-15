@@ -5,9 +5,12 @@ import {
   avgCalidadByDate,
   avgDailyCurrentMonth,
   calcDayOverDayDelta,
+  calcDeltaForDate,
   filterLastDays,
   getCurrentMonthRange,
   groupSumByDate,
+  rowsOnDate,
+  toggleSelectedDate,
 } from '../chartUtils';
 import { apiFromDate, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
@@ -17,6 +20,7 @@ import KpiCard from '../components/KpiCard';
 import LitrosBarChart from '../components/LitrosBarChart';
 import LoadingScreen from '../components/LoadingScreen';
 import QualityGauge from '../components/QualityGauge';
+import SelectedDateBanner from '../components/SelectedDateBanner';
 
 const PERIOD_OPTIONS = [
   { days: 14, label: '14 dias' },
@@ -29,6 +33,7 @@ export default function Resumen() {
   const [remisiones, setRemisiones] = useState([]);
   const [calidad, setCalidad] = useState([]);
   const [chartDays, setChartDays] = useState(30);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const monthLabel = getCurrentMonthRange().label;
@@ -68,13 +73,52 @@ export default function Resumen() {
   );
 
   const calidadChart = useMemo(() => avgCalidadByDate(calidad), [calidad]);
+  const calidadChartVisible = useMemo(
+    () => filterLastDays(calidadChart, 90),
+    [calidadChart]
+  );
 
-  const litrosDelta = useMemo(() => calcDayOverDayDelta(litrosByDay), [litrosByDay]);
+  const litrosDelta = useMemo(() => {
+    if (selectedDate) return calcDeltaForDate(litrosByDay, selectedDate);
+    return calcDayOverDayDelta(litrosByDay);
+  }, [litrosByDay, selectedDate]);
+
   const promedioDiario = useMemo(() => avgDailyCurrentMonth(litrosByDay), [litrosByDay]);
 
-  const ultimoRem = remisiones[0] || null;
-  const ultimoCal = calidad[0] || null;
-  const ultimasEntregas = remisiones.slice(0, 10);
+  const selectedRemisiones = useMemo(
+    () => rowsOnDate(remisiones, 'doc_date', selectedDate),
+    [remisiones, selectedDate]
+  );
+
+  const selectedCalidadRows = useMemo(
+    () => rowsOnDate(calidad, 'collection_date', selectedDate),
+    [calidad, selectedDate]
+  );
+
+  const selectedCalidadPoint = useMemo(
+    () => calidadChart.find((row) => String(row.date).slice(0, 10) === selectedDate) || null,
+    [calidadChart, selectedDate]
+  );
+
+  const ultimoRem = selectedDate
+    ? selectedRemisiones[0] || null
+    : remisiones[0] || null;
+
+  const litrosSeleccionados = selectedDate
+    ? selectedRemisiones.reduce((sum, row) => sum + (Number(row.quantity) || 0), 0)
+    : null;
+
+  const ultimoCal = selectedDate
+    ? selectedCalidadPoint
+    : calidad[0] || null;
+
+  const ultimasEntregas = selectedDate
+    ? selectedRemisiones
+    : remisiones.slice(0, 10);
+
+  function handleDateSelect(date) {
+    setSelectedDate((current) => toggleSelectedDate(current, date));
+  }
 
   if (loading) {
     return <LoadingScreen />;
@@ -88,11 +132,21 @@ export default function Resumen() {
         <h2 className="page-title">Resumen</h2>
         {error && <div className="error-msg">{error}</div>}
 
+        <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
+
         <div className="kpi-grid">
           <KpiCard
             icon="🥛"
-            label="Ultima entrega"
-            value={ultimoRem ? `${fmt(ultimoRem.quantity)} L` : '—'}
+            label={selectedDate ? `Entrega (${fmtDate(selectedDate)})` : 'Ultima entrega'}
+            value={
+              selectedDate
+                ? litrosSeleccionados > 0
+                  ? `${fmt(litrosSeleccionados)} L`
+                  : '—'
+                : ultimoRem
+                  ? `${fmt(ultimoRem.quantity)} L`
+                  : '—'
+            }
             delta={litrosDelta}
             deltaLabel="% vs dia anterior"
           />
@@ -103,12 +157,12 @@ export default function Resumen() {
           />
           <KpiCard
             icon="🧪"
-            label="Grasa ultima muestra"
+            label={selectedDate ? `Grasa (${fmtDate(selectedDate)})` : 'Grasa ultima muestra'}
             value={ultimoCal?.fat != null ? `${fmt(ultimoCal.fat)} %` : '—'}
           />
           <KpiCard
             icon="🧬"
-            label="Proteina ultima muestra"
+            label={selectedDate ? `Proteina (${fmtDate(selectedDate)})` : 'Proteina ultima muestra'}
             value={ultimoCal?.protein != null ? `${fmt(ultimoCal.protein)} %` : '—'}
           />
         </div>
@@ -131,29 +185,48 @@ export default function Resumen() {
               </div>
             }
           >
-            <LitrosBarChart data={chartLitros} />
+            <LitrosBarChart
+              data={chartLitros}
+              selectedDate={selectedDate}
+              onDateSelect={handleDateSelect}
+            />
           </ChartPanel>
 
-          <ChartPanel title="Evolucion calidad (grasa y proteina)">
-            <CalidadLineChart data={filterLastDays(calidadChart, 90)} />
+          <ChartPanel title="Evolucion composicion (grasa y proteina)">
+            <CalidadLineChart
+              data={calidadChartVisible}
+              selectedDate={selectedDate}
+              onDateSelect={handleDateSelect}
+            />
           </ChartPanel>
         </div>
 
         <div className="gauges-grid">
-          <ChartPanel title="Ultima muestra — medidores">
+          <ChartPanel
+            title={
+              selectedDate
+                ? `Muestra del ${fmtDate(selectedDate)} — medidores`
+                : 'Ultima muestra — medidores'
+            }
+          >
             <div className="gauges-row">
               <QualityGauge label="Grasa" value={ultimoCal?.fat} max={6} />
               <QualityGauge label="Proteina" value={ultimoCal?.protein} max={5} />
               <QualityGauge label="Lactosa" value={ultimoCal?.lactose} max={6} />
               <QualityGauge label="Solidos totales" value={ultimoCal?.ts} max={14} />
             </div>
+            {selectedDate && selectedCalidadRows.length === 0 && (
+              <p className="chart-empty">Sin muestras de composicion para este dia.</p>
+            )}
           </ChartPanel>
         </div>
 
-        <ChartPanel title="Ultimas entregas">
+        <ChartPanel title={selectedDate ? `Entregas del ${fmtDate(selectedDate)}` : 'Ultimas entregas'}>
           <div className="table-wrap table-wrap--flat">
             {ultimasEntregas.length === 0 ? (
-              <div className="empty-state">Sin entregas recientes.</div>
+              <div className="empty-state">
+                {selectedDate ? 'Sin entregas para el dia seleccionado.' : 'Sin entregas recientes.'}
+              </div>
             ) : (
               <table>
                 <thead>

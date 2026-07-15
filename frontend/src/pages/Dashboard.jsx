@@ -1,13 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { avgCalidadByDate, avgCalidadMonth, filterLastDays, getCurrentMonthRange } from '../chartUtils';
+import {
+  avgCalidadByDate,
+  avgCalidadMonth,
+  avgCalidadSnapshot,
+  filterLastDays,
+  getCurrentMonthRange,
+  rowsOnDate,
+  toggleSelectedDate,
+} from '../chartUtils';
 import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
 import LoadingScreen from '../components/LoadingScreen';
 import QualityGauge from '../components/QualityGauge';
+import SelectedDateBanner from '../components/SelectedDateBanner';
 
 const METRICS = [
   { key: 'fat', label: 'Grasa %' },
@@ -52,6 +61,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
   const [chartRegistros, setChartRegistros] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState(DATA_FROM_DATE);
@@ -93,6 +103,7 @@ export default function Dashboard() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSelectedDate(null);
     try {
       await loadRegistros();
     } catch (err) {
@@ -102,24 +113,45 @@ export default function Dashboard() {
     }
   }
 
+  const calidadChart = useMemo(
+    () => filterLastDays(avgCalidadByDate(chartRegistros), 90),
+    [chartRegistros]
+  );
+
+  const selectedRows = useMemo(
+    () => rowsOnDate(chartRegistros, 'collection_date', selectedDate),
+    [chartRegistros, selectedDate]
+  );
+
+  const ultimo = selectedDate
+    ? avgCalidadSnapshot(selectedRows)
+    : chartRegistros[0] || null;
+
+  const promedioMes = avgCalidadMonth(chartRegistros);
+
+  function handleDateSelect(date) {
+    setSelectedDate((current) => toggleSelectedDate(current, date));
+  }
+
   if (loading) {
     return <LoadingScreen />;
   }
-
-  const calidadChart = filterLastDays(avgCalidadByDate(chartRegistros), 90);
-  const ultimo = chartRegistros[0] || null;
-  const promedioMes = avgCalidadMonth(chartRegistros);
 
   return (
     <div className="layout">
       <AppHeader />
 
       <main className="main">
-        <h2 className="page-title">Calidad de leche</h2>
+        <h2 className="page-title">Composición</h2>
         {error && <div className="error-msg">{error}</div>}
 
+        <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
+
         <div className="cards-grid">
-          <ResumenCard title="Ultimo analisis" data={ultimo} />
+          <ResumenCard
+            title={selectedDate ? `Analisis del ${fmtDate(selectedDate)}` : 'Ultimo analisis'}
+            data={ultimo}
+          />
           <ResumenCard
             title={`Promedio mes corriente (${monthLabel})`}
             data={
@@ -132,9 +164,19 @@ export default function Dashboard() {
 
         <div className="charts-grid">
           <ChartPanel title="Evolucion grasa y proteina (90 dias)">
-            <CalidadLineChart data={calidadChart} />
+            <CalidadLineChart
+              data={calidadChart}
+              selectedDate={selectedDate}
+              onDateSelect={handleDateSelect}
+            />
           </ChartPanel>
-          <ChartPanel title="Ultima muestra — medidores">
+          <ChartPanel
+            title={
+              selectedDate
+                ? `Muestra del ${fmtDate(selectedDate)} — medidores`
+                : 'Ultima muestra — medidores'
+            }
+          >
             <div className="gauges-row">
               <QualityGauge label="Grasa" value={ultimo?.fat} max={6} />
               <QualityGauge label="Proteina" value={ultimo?.protein} max={5} />
@@ -184,7 +226,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {registros.map((r, i) => (
+                {(selectedDate ? selectedRows : registros).map((r, i) => (
                   <tr key={`${r.collection_date}-${r.sub}-${i}`}>
                     <td>{fmtDate(r.collection_date)}</td>
                     <td>{r.sub}</td>

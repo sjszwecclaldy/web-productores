@@ -632,13 +632,57 @@ td.num {
   background: var(--bg);
 }
 
+.loading-screen__badge {
+  width: min(360px, 72vw);
+  height: min(360px, 72vw);
+  border-radius: 50%;
+  background: #f2f5f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: logo-pulse 1.2s ease-in-out infinite;
+}
+
 .loading-screen__logo {
   display: block;
-  height: min(280px, 38vh);
+  height: min(220px, 30vh);
   width: auto;
-  max-width: min(420px, 85vw);
+  max-width: min(320px, 58vw);
   object-fit: contain;
-  animation: logo-pulse 1.2s ease-in-out infinite;
+}
+
+.selected-date-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding: 0.65rem 1rem;
+  background: var(--bg-tint);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.selected-date-banner strong {
+  color: var(--text);
+}
+
+.selected-date-banner__clear {
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.selected-date-banner__clear:hover {
+  color: var(--primary-hover);
 }
 
 @keyframes logo-pulse {

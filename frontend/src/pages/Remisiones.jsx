@@ -1,18 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
+import {
+  filterLastDays,
+  getCurrentMonthRange,
+  groupSumByDate,
+  rowsOnDate,
+  sumRemisionesMonth,
+  toggleSelectedDate,
+} from '../chartUtils';
 import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
 import LitrosBarChart from '../components/LitrosBarChart';
 import LoadingScreen from '../components/LoadingScreen';
-import { filterLastDays, getCurrentMonthRange, groupSumByDate, sumRemisionesMonth } from '../chartUtils';
+import SelectedDateBanner from '../components/SelectedDateBanner';
 
 export default function Remisiones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
   const [chartRegistros, setChartRegistros] = useState([]);
   const [chartDays, setChartDays] = useState(30);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState(DATA_FROM_DATE);
@@ -54,6 +63,7 @@ export default function Remisiones() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSelectedDate(null);
     try {
       await loadRegistros();
     } catch (err) {
@@ -68,12 +78,33 @@ export default function Remisiones() {
     [chartRegistros, chartDays]
   );
 
+  const selectedRemisiones = useMemo(
+    () => rowsOnDate(chartRegistros, 'doc_date', selectedDate),
+    [chartRegistros, selectedDate]
+  );
+
+  const ultimo = selectedDate ? selectedRemisiones[0] || null : chartRegistros[0] || null;
+
+  const totalesDia = useMemo(() => {
+    if (!selectedDate) return null;
+    return {
+      total_litros: selectedRemisiones.reduce((sum, row) => sum + (Number(row.quantity) || 0), 0),
+      total_importe: selectedRemisiones.reduce((sum, row) => sum + (Number(row.line_total) || 0), 0),
+      entregas: selectedRemisiones.length,
+    };
+  }, [selectedDate, selectedRemisiones]);
+
+  const totales = selectedDate ? totalesDia : sumRemisionesMonth(chartRegistros);
+
+  const tablaRegistros = selectedDate ? selectedRemisiones : registros;
+
+  function handleDateSelect(date) {
+    setSelectedDate((current) => toggleSelectedDate(current, date));
+  }
+
   if (loading) {
     return <LoadingScreen />;
   }
-
-  const ultimo = chartRegistros[0] || null;
-  const totales = sumRemisionesMonth(chartRegistros);
 
   return (
     <div className="layout">
@@ -83,16 +114,17 @@ export default function Remisiones() {
         <h2 className="page-title">Remisiones</h2>
         {error && <div className="error-msg">{error}</div>}
 
+        <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
+
         <div className="cards-grid">
           <div className="stat-card">
-            <h3>Último remito</h3>
+            <h3>{selectedDate ? `Remito del ${fmtDate(selectedDate)}` : 'Último remito'}</h3>
             {ultimo ? (
               <>
                 <p style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: 'var(--muted)' }}>
                   Fecha: {fmtDate(ultimo.doc_date)}
                   {ultimo.doc_num != null && ` · Remito ${ultimo.doc_num}`}
                 </p>
-                <div className="stat-row"><span>Producto</span><span className="value">{ultimo.descripcion || '—'}</span></div>
                 <div className="stat-row"><span>Litros</span><span className="value">{fmt(ultimo.quantity)}</span></div>
                 <div className="stat-row"><span>Precio</span><span className="value">{fmt(ultimo.price)}</span></div>
                 <div className="stat-row"><span>Total</span><span className="value">{fmt(ultimo.line_total)}</span></div>
@@ -103,8 +135,12 @@ export default function Remisiones() {
           </div>
 
           <div className="stat-card">
-            <h3>Totales mes corriente ({monthLabel})</h3>
-            {totales.entregas > 0 ? (
+            <h3>
+              {selectedDate
+                ? `Totales del ${fmtDate(selectedDate)}`
+                : `Totales mes corriente (${monthLabel})`}
+            </h3>
+            {totales && totales.entregas > 0 ? (
               <>
                 <div className="stat-row"><span>Litros entregados</span><span className="value">{fmt(totales.total_litros)}</span></div>
                 <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totales.total_importe)}</span></div>
@@ -133,7 +169,11 @@ export default function Remisiones() {
             </div>
           }
         >
-          <LitrosBarChart data={chartLitros} />
+          <LitrosBarChart
+            data={chartLitros}
+            selectedDate={selectedDate}
+            onDateSelect={handleDateSelect}
+          />
         </ChartPanel>
 
         <form className="filters" onSubmit={handleFilter}>
@@ -151,26 +191,28 @@ export default function Remisiones() {
         </form>
 
         <div className="table-wrap">
-          {registros.length === 0 ? (
-            <div className="empty-state">No hay remitos para el período seleccionado.</div>
+          {tablaRegistros.length === 0 ? (
+            <div className="empty-state">
+              {selectedDate
+                ? 'No hay remitos para el dia seleccionado.'
+                : 'No hay remitos para el período seleccionado.'}
+            </div>
           ) : (
             <table>
               <thead>
                 <tr>
                   <th>Fecha</th>
                   <th>Remito</th>
-                  <th>Producto</th>
                   <th>Litros</th>
                   <th>Precio</th>
                   <th>Total</th>
                 </tr>
               </thead>
               <tbody>
-                {registros.map((r, i) => (
+                {tablaRegistros.map((r, i) => (
                   <tr key={`${r.doc_num}-${i}`}>
                     <td>{fmtDate(r.doc_date)}</td>
                     <td>{r.doc_num}</td>
-                    <td>{r.descripcion || ''}</td>
                     <td className="num">{fmt(r.quantity)}</td>
                     <td className="num">{fmt(r.price)}</td>
                     <td className="num">{fmt(r.line_total)}</td>

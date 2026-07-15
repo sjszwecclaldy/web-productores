@@ -29,7 +29,7 @@ export function formatMonthLabel(ym) {
 export function groupSumByDate(rows, dateKey, valueKey) {
   const map = new Map();
   for (const row of rows) {
-    const date = row[dateKey];
+    const date = row[dateKey] ? String(row[dateKey]).slice(0, 10) : null;
     if (!date) continue;
     const val = Number(row[valueKey]) || 0;
     map.set(date, (map.get(date) || 0) + val);
@@ -84,10 +84,43 @@ export function groupDualByMonth(rows, dateKey, fieldA, fieldB, keyA, keyB) {
     .sort((a, b) => a.month.localeCompare(b.month));
 }
 
+export function rowsOnDate(rows, dateKey, date) {
+  if (!date) return [];
+  const d = String(date).slice(0, 10);
+  return rows.filter((row) => String(row[dateKey] || '').slice(0, 10) === d);
+}
+
+export function avgCalidadSnapshot(rows) {
+  if (!rows.length) return null;
+  const keys = ['fat', 'protein', 'lactose', 'ts', 'fpd', 'casein', 'urea'];
+  const result = {
+    collection_date: rows[0].collection_date,
+    sub: rows.length === 1 ? rows[0].sub : null,
+  };
+  for (const key of keys) {
+    const vals = rows.map((r) => Number(r[key])).filter((n) => Number.isFinite(n));
+    result[key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  }
+  return result;
+}
+
+export function calcDeltaForDate(grouped, date, valueKey = 'total') {
+  const idx = grouped.findIndex((row) => row.date === date);
+  if (idx < 1) return null;
+  const curr = Number(grouped[idx][valueKey]) || 0;
+  const prev = Number(grouped[idx - 1][valueKey]) || 0;
+  if (prev === 0) return null;
+  return Math.round(((curr - prev) / prev) * 1000) / 10;
+}
+
+export function toggleSelectedDate(current, next) {
+  return current === next ? null : next;
+}
+
 export function avgCalidadByDate(rows) {
   const map = new Map();
   for (const row of rows) {
-    const date = row.collection_date;
+    const date = row.collection_date ? String(row.collection_date).slice(0, 10) : null;
     if (!date) continue;
     if (!map.has(date)) {
       map.set(date, { fat: [], protein: [], lactose: [], ts: [] });
