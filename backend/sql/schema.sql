@@ -58,6 +58,26 @@ CREATE TABLE IF NOT EXISTS remisiones (
 CREATE INDEX IF NOT EXISTS idx_remisiones_card_date
   ON remisiones (card_code, doc_date DESC);
 
+CREATE TABLE IF NOT EXISTS liquidaciones (
+  id SERIAL PRIMARY KEY,
+  card_code TEXT NOT NULL,
+  group_code TEXT,
+  doc_date DATE NOT NULL,
+  num_at_card TEXT NOT NULL DEFAULT '',
+  item_code TEXT NOT NULL DEFAULT '',
+  cantidad NUMERIC,
+  total NUMERIC,
+  imeba NUMERIC,
+  inia NUMERIC,
+  aftosa_usd NUMERIC,
+  enferm_usd NUMERIC,
+  synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (card_code, doc_date, item_code, num_at_card)
+);
+
+CREATE INDEX IF NOT EXISTS idx_liquidaciones_card_date
+  ON liquidaciones (card_code, doc_date DESC);
+
 CREATE TABLE IF NOT EXISTS sync_log (
   id SERIAL PRIMARY KEY,
   started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

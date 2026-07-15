@@ -73,6 +73,33 @@ $Domains = @(
                 line_total   = $Row.LineTotal
             }
         }
+    },
+    @{
+        Name        = 'LIQUIDACION'
+        DomainKey   = 'liquidaciones'
+        SapService  = 'LIQUIDACION'
+        DateField   = 'DocDate'
+        IngestPath  = '/internal/ingest/liquidaciones'
+        SelectFields = @(
+            'GroupCode', 'CardCode', 'DocDate', 'NumAtCard', 'ItemCode',
+            'CANTIDAD', 'TOTAL', 'IMEBA', 'INIA', 'Aftosa_USD', 'Enferm_USD'
+        )
+        Transform = {
+            param($Row)
+            @{
+                card_code   = $Row.CardCode
+                group_code  = $Row.GroupCode
+                doc_date    = $Row.DocDate
+                num_at_card = $Row.NumAtCard
+                item_code   = $Row.ItemCode
+                cantidad    = $Row.CANTIDAD
+                total       = $Row.TOTAL
+                imeba       = $Row.IMEBA
+                inia        = $Row.INIA
+                aftosa_usd  = $Row.Aftosa_USD
+                enferm_usd  = $Row.Enferm_USD
+            }
+        }
     }
 )
 
