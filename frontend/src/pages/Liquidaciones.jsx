@@ -1,46 +1,40 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { dateDaysAgo, groupDualByMonth } from '../chartUtils';
-import { fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
+import LoadingScreen from '../components/LoadingScreen';
 import MonthlyBarChart from '../components/MonthlyBarChart';
+import { getCurrentMonthRange, groupDualByMonth, sumLiquidacionesMonth } from '../chartUtils';
 
 export default function Liquidaciones() {
   const navigate = useNavigate();
-  const [resumen, setResumen] = useState(null);
   const [registros, setRegistros] = useState([]);
   const [chartRegistros, setChartRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState('');
+  const [from, setFrom] = useState(DATA_FROM_DATE);
   const [to, setTo] = useState('');
-
-  async function loadResumen() {
-    const data = await api('/api/liquidaciones/resumen');
-    setResumen(data);
-  }
+  const monthLabel = getCurrentMonthRange().label;
 
   async function loadChartRegistros() {
-    const from = dateDaysAgo(365);
-    const data = await api(`/api/liquidaciones?from=${from}`);
-    setChartRegistros(data.data);
+    const data = await api(`/api/liquidaciones?from=${apiFromDate(365)}`);
+    setChartRegistros(filterFromMinDate(data.data, 'doc_date'));
   }
 
   async function loadRegistros() {
     const params = new URLSearchParams();
-    if (from) params.set('from', from);
+    params.set('from', buildQueryFrom(from));
     if (to) params.set('to', to);
-    const qs = params.toString();
-    const data = await api(`/api/liquidaciones${qs ? `?${qs}` : ''}`);
-    setRegistros(data.data);
+    const data = await api(`/api/liquidaciones?${params.toString()}`);
+    setRegistros(filterFromMinDate(data.data, 'doc_date'));
   }
 
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadResumen(), loadRegistros(), loadChartRegistros()]);
+        await Promise.all([loadRegistros(), loadChartRegistros()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -73,12 +67,12 @@ export default function Liquidaciones() {
     [chartRegistros]
   );
 
-  if (loading && !resumen) {
-    return <div className="loading">Cargando…</div>;
+  if (loading) {
+    return <LoadingScreen />;
   }
 
-  const ultima = resumen?.ultima;
-  const totales = resumen?.totales_ultimo_ano;
+  const ultima = chartRegistros[0] || null;
+  const totales = sumLiquidacionesMonth(chartRegistros);
 
   return (
     <div className="layout">
@@ -110,8 +104,8 @@ export default function Liquidaciones() {
           </div>
 
           <div className="stat-card">
-            <h3>Totales último año</h3>
-            {totales ? (
+            <h3>Totales mes corriente ({monthLabel})</h3>
+            {totales.liquidaciones > 0 ? (
               <>
                 <div className="stat-row"><span>Litros liquidados</span><span className="value">{fmt(totales.total_litros)}</span></div>
                 <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totales.total_importe)}</span></div>
@@ -136,7 +130,7 @@ export default function Liquidaciones() {
         <form className="filters" onSubmit={handleFilter}>
           <div className="form-group">
             <label htmlFor="from">Desde</label>
-            <input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <input id="from" type="date" min={DATA_FROM_DATE} value={from} onChange={(e) => setFrom(e.target.value)} />
           </div>
           <div className="form-group">
             <label htmlFor="to">Hasta</label>

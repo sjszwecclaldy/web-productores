@@ -9,6 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { CHART_COLORS } from '../chartUtils';
+import { fmt } from '../utils';
 
 export default function CalidadLineChart({ data, series, emptyMessage = 'Sin datos para el período' }) {
   if (!data || data.length === 0) {
@@ -35,7 +36,7 @@ export default function CalidadLineChart({ data, series, emptyMessage = 'Sin dat
         <Tooltip
           formatter={(value, name) => {
             const s = lines.find((l) => l.key === name);
-            return [`${Number(value).toFixed(2)}`, s?.label || name];
+            return [fmt(value), s?.label || name];
           }}
           contentStyle={{ borderRadius: 8, border: '1px solid #ccddd4' }}
         />

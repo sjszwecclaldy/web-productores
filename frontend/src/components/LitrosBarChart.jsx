@@ -8,6 +8,7 @@ import {
   YAxis,
 } from 'recharts';
 import { CHART_COLORS } from '../chartUtils';
+import { fmt } from '../utils';
 
 export default function LitrosBarChart({ data, emptyMessage = 'Sin datos para el período' }) {
   if (!data || data.length === 0) {
@@ -25,7 +26,7 @@ export default function LitrosBarChart({ data, emptyMessage = 'Sin datos para el
         />
         <YAxis tick={{ fontSize: 11, fill: '#5a6d62' }} width={48} />
         <Tooltip
-          formatter={(value) => [`${Number(value).toLocaleString('es-AR')} L`, 'Litros']}
+          formatter={(value) => [`${fmt(value)} L`, 'Litros']}
           labelFormatter={(label) => label}
           contentStyle={{ borderRadius: 8, border: '1px solid #ccddd4' }}
         />

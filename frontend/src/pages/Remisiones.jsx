@@ -1,47 +1,41 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { dateDaysAgo, filterLastDays, groupSumByDate } from '../chartUtils';
-import { fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
 import LitrosBarChart from '../components/LitrosBarChart';
+import LoadingScreen from '../components/LoadingScreen';
+import { filterLastDays, getCurrentMonthRange, groupSumByDate, sumRemisionesMonth } from '../chartUtils';
 
 export default function Remisiones() {
   const navigate = useNavigate();
-  const [resumen, setResumen] = useState(null);
   const [registros, setRegistros] = useState([]);
   const [chartRegistros, setChartRegistros] = useState([]);
   const [chartDays, setChartDays] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState('');
+  const [from, setFrom] = useState(DATA_FROM_DATE);
   const [to, setTo] = useState('');
-
-  async function loadResumen() {
-    const data = await api('/api/remisiones/resumen');
-    setResumen(data);
-  }
+  const monthLabel = getCurrentMonthRange().label;
 
   async function loadChartRegistros() {
-    const from = dateDaysAgo(90);
-    const data = await api(`/api/remisiones?from=${from}`);
-    setChartRegistros(data.data);
+    const data = await api(`/api/remisiones?from=${apiFromDate(90)}`);
+    setChartRegistros(filterFromMinDate(data.data, 'doc_date'));
   }
 
   async function loadRegistros() {
     const params = new URLSearchParams();
-    if (from) params.set('from', from);
+    params.set('from', buildQueryFrom(from));
     if (to) params.set('to', to);
-    const qs = params.toString();
-    const data = await api(`/api/remisiones${qs ? `?${qs}` : ''}`);
-    setRegistros(data.data);
+    const data = await api(`/api/remisiones?${params.toString()}`);
+    setRegistros(filterFromMinDate(data.data, 'doc_date'));
   }
 
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadResumen(), loadRegistros(), loadChartRegistros()]);
+        await Promise.all([loadRegistros(), loadChartRegistros()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -74,12 +68,12 @@ export default function Remisiones() {
     [chartRegistros, chartDays]
   );
 
-  if (loading && !resumen) {
-    return <div className="loading">Cargando…</div>;
+  if (loading) {
+    return <LoadingScreen />;
   }
 
-  const ultimo = resumen?.ultimo;
-  const totales = resumen?.totales_ultimo_mes;
+  const ultimo = chartRegistros[0] || null;
+  const totales = sumRemisionesMonth(chartRegistros);
 
   return (
     <div className="layout">
@@ -109,8 +103,8 @@ export default function Remisiones() {
           </div>
 
           <div className="stat-card">
-            <h3>Totales último mes</h3>
-            {totales ? (
+            <h3>Totales mes corriente ({monthLabel})</h3>
+            {totales.entregas > 0 ? (
               <>
                 <div className="stat-row"><span>Litros entregados</span><span className="value">{fmt(totales.total_litros)}</span></div>
                 <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totales.total_importe)}</span></div>
@@ -145,7 +139,7 @@ export default function Remisiones() {
         <form className="filters" onSubmit={handleFilter}>
           <div className="form-group">
             <label htmlFor="from">Desde</label>
-            <input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <input id="from" type="date" min={DATA_FROM_DATE} value={from} onChange={(e) => setFrom(e.target.value)} />
           </div>
           <div className="form-group">
             <label htmlFor="to">Hasta</label>

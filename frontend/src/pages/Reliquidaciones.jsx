@@ -1,46 +1,40 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { CHART_COLORS, dateDaysAgo, groupSumByMonth } from '../chartUtils';
-import { fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
+import LoadingScreen from '../components/LoadingScreen';
 import MonthlyBarChart from '../components/MonthlyBarChart';
+import { CHART_COLORS, getCurrentMonthRange, groupSumByMonth, sumReliquidacionesMonth } from '../chartUtils';
 
 export default function Reliquidaciones() {
   const navigate = useNavigate();
-  const [resumen, setResumen] = useState(null);
   const [registros, setRegistros] = useState([]);
   const [chartRegistros, setChartRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState('');
+  const [from, setFrom] = useState(DATA_FROM_DATE);
   const [to, setTo] = useState('');
-
-  async function loadResumen() {
-    const data = await api('/api/reliquidaciones/resumen');
-    setResumen(data);
-  }
+  const monthLabel = getCurrentMonthRange().label;
 
   async function loadChartRegistros() {
-    const from = dateDaysAgo(365);
-    const data = await api(`/api/reliquidaciones?from=${from}`);
-    setChartRegistros(data.data);
+    const data = await api(`/api/reliquidaciones?from=${apiFromDate(365)}`);
+    setChartRegistros(filterFromMinDate(data.data, 'doc_date'));
   }
 
   async function loadRegistros() {
     const params = new URLSearchParams();
-    if (from) params.set('from', from);
+    params.set('from', buildQueryFrom(from));
     if (to) params.set('to', to);
-    const qs = params.toString();
-    const data = await api(`/api/reliquidaciones${qs ? `?${qs}` : ''}`);
-    setRegistros(data.data);
+    const data = await api(`/api/reliquidaciones?${params.toString()}`);
+    setRegistros(filterFromMinDate(data.data, 'doc_date'));
   }
 
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadResumen(), loadRegistros(), loadChartRegistros()]);
+        await Promise.all([loadRegistros(), loadChartRegistros()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -73,12 +67,12 @@ export default function Reliquidaciones() {
     return rows.map((r) => ({ ...r, importe: r.total }));
   }, [chartRegistros]);
 
-  if (loading && !resumen) {
-    return <div className="loading">Cargando…</div>;
+  if (loading) {
+    return <LoadingScreen />;
   }
 
-  const ultima = resumen?.ultima;
-  const totales = resumen?.totales_ultimo_ano;
+  const ultima = chartRegistros[0] || null;
+  const totales = sumReliquidacionesMonth(chartRegistros);
 
   return (
     <div className="layout">
@@ -108,8 +102,8 @@ export default function Reliquidaciones() {
           </div>
 
           <div className="stat-card">
-            <h3>Totales último año</h3>
-            {totales ? (
+            <h3>Totales mes corriente ({monthLabel})</h3>
+            {totales.reliquidaciones > 0 ? (
               <>
                 <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totales.total_importe)}</span></div>
                 <div className="stat-row"><span>Reliquidaciones</span><span className="value">{totales.reliquidaciones}</span></div>
@@ -130,7 +124,7 @@ export default function Reliquidaciones() {
         <form className="filters" onSubmit={handleFilter}>
           <div className="form-group">
             <label htmlFor="from">Desde</label>
-            <input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <input id="from" type="date" min={DATA_FROM_DATE} value={from} onChange={(e) => setFrom(e.target.value)} />
           </div>
           <div className="form-group">
             <label htmlFor="to">Hasta</label>

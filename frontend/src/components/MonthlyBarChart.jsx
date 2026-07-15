@@ -9,6 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { CHART_COLORS } from '../chartUtils';
+import { fmt } from '../utils';
 
 export default function MonthlyBarChart({
   data,
@@ -35,8 +36,7 @@ export default function MonthlyBarChart({
         <Tooltip
           formatter={(value, name) => {
             const s = series.find((b) => b.key === name);
-            const n = Number(value);
-            return [n.toLocaleString('es-AR', { maximumFractionDigits: 2 }), s?.label || name];
+            return [fmt(value), s?.label || name];
           }}
           contentStyle={{ borderRadius: 8, border: '1px solid #ccddd4' }}
         />

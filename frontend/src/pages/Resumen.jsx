@@ -3,50 +3,46 @@ import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import {
   avgCalidadByDate,
-  avgDaily,
+  avgDailyCurrentMonth,
   calcDayOverDayDelta,
-  dateDaysAgo,
   filterLastDays,
+  getCurrentMonthRange,
   groupSumByDate,
 } from '../chartUtils';
-import { fmt, fmtDate } from '../utils';
+import { apiFromDate, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
 import KpiCard from '../components/KpiCard';
 import LitrosBarChart from '../components/LitrosBarChart';
+import LoadingScreen from '../components/LoadingScreen';
 import QualityGauge from '../components/QualityGauge';
 
 const PERIOD_OPTIONS = [
-  { days: 14, label: '14 días' },
-  { days: 30, label: '30 días' },
-  { days: 90, label: '90 días' },
+  { days: 14, label: '14 dias' },
+  { days: 30, label: '30 dias' },
+  { days: 90, label: '90 dias' },
 ];
 
 export default function Resumen() {
   const navigate = useNavigate();
-  const [remResumen, setRemResumen] = useState(null);
-  const [calResumen, setCalResumen] = useState(null);
   const [remisiones, setRemisiones] = useState([]);
   const [calidad, setCalidad] = useState([]);
   const [chartDays, setChartDays] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const monthLabel = getCurrentMonthRange().label;
 
   useEffect(() => {
     async function init() {
       try {
-        const from = dateDaysAgo(90);
-        const [remSum, calSum, remData, calData] = await Promise.all([
-          api('/api/remisiones/resumen'),
-          api('/api/calidad-composicion/resumen'),
+        const from = apiFromDate(90);
+        const [remData, calData] = await Promise.all([
           api(`/api/remisiones?from=${from}`),
           api(`/api/calidad-composicion?from=${from}`),
         ]);
-        setRemResumen(remSum);
-        setCalResumen(calSum);
-        setRemisiones(remData.data);
-        setCalidad(calData.data);
+        setRemisiones(filterFromMinDate(remData.data, 'doc_date'));
+        setCalidad(filterFromMinDate(calData.data, 'collection_date'));
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -74,14 +70,14 @@ export default function Resumen() {
   const calidadChart = useMemo(() => avgCalidadByDate(calidad), [calidad]);
 
   const litrosDelta = useMemo(() => calcDayOverDayDelta(litrosByDay), [litrosByDay]);
-  const promedioDiario = useMemo(() => avgDaily(filterLastDays(litrosByDay, 30)), [litrosByDay]);
+  const promedioDiario = useMemo(() => avgDailyCurrentMonth(litrosByDay), [litrosByDay]);
 
-  const ultimoRem = remResumen?.ultimo;
-  const ultimoCal = calResumen?.ultimo;
+  const ultimoRem = remisiones[0] || null;
+  const ultimoCal = calidad[0] || null;
   const ultimasEntregas = remisiones.slice(0, 10);
 
   if (loading) {
-    return <div className="loading">Cargando…</div>;
+    return <LoadingScreen />;
   }
 
   return (
@@ -102,7 +98,7 @@ export default function Resumen() {
           />
           <KpiCard
             icon="📊"
-            label="Promedio diario (30d)"
+            label={`Promedio diario (${monthLabel})`}
             value={promedioDiario != null ? `${fmt(promedioDiario)} L` : '—'}
           />
           <KpiCard

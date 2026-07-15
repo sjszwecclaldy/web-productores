@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { avgCalidadByDate, dateDaysAgo, filterLastDays } from '../chartUtils';
-import { fmt, fmtDate } from '../utils';
+import { avgCalidadByDate, avgCalidadMonth, filterLastDays, getCurrentMonthRange } from '../chartUtils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
+import LoadingScreen from '../components/LoadingScreen';
 import QualityGauge from '../components/QualityGauge';
 
 const METRICS = [
@@ -49,38 +50,31 @@ function ResumenCard({ title, data }) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [resumen, setResumen] = useState(null);
   const [registros, setRegistros] = useState([]);
   const [chartRegistros, setChartRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState('');
+  const [from, setFrom] = useState(DATA_FROM_DATE);
   const [to, setTo] = useState('');
-
-  async function loadResumen() {
-    const data = await api('/api/calidad-composicion/resumen');
-    setResumen(data);
-  }
+  const monthLabel = getCurrentMonthRange().label;
 
   async function loadChartRegistros() {
-    const from = dateDaysAgo(90);
-    const data = await api(`/api/calidad-composicion?from=${from}`);
-    setChartRegistros(data.data);
+    const data = await api(`/api/calidad-composicion?from=${apiFromDate(90)}`);
+    setChartRegistros(filterFromMinDate(data.data, 'collection_date'));
   }
 
   async function loadRegistros() {
     const params = new URLSearchParams();
-    if (from) params.set('from', from);
+    params.set('from', buildQueryFrom(from));
     if (to) params.set('to', to);
-    const qs = params.toString();
-    const data = await api(`/api/calidad-composicion${qs ? `?${qs}` : ''}`);
-    setRegistros(data.data);
+    const data = await api(`/api/calidad-composicion?${params.toString()}`);
+    setRegistros(filterFromMinDate(data.data, 'collection_date'));
   }
 
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadResumen(), loadRegistros(), loadChartRegistros()]);
+        await Promise.all([loadRegistros(), loadChartRegistros()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -108,12 +102,13 @@ export default function Dashboard() {
     }
   }
 
-  if (loading && !resumen) {
-    return <div className="loading">Cargando…</div>;
+  if (loading) {
+    return <LoadingScreen />;
   }
 
   const calidadChart = filterLastDays(avgCalidadByDate(chartRegistros), 90);
-  const ultimo = resumen?.ultimo;
+  const ultimo = chartRegistros[0] || null;
+  const promedioMes = avgCalidadMonth(chartRegistros);
 
   return (
     <div className="layout">
@@ -124,15 +119,12 @@ export default function Dashboard() {
         {error && <div className="error-msg">{error}</div>}
 
         <div className="cards-grid">
-          <ResumenCard title="Último análisis" data={resumen?.ultimo} />
+          <ResumenCard title="Ultimo analisis" data={ultimo} />
           <ResumenCard
-            title="Promedio último mes"
+            title={`Promedio mes corriente (${monthLabel})`}
             data={
-              resumen?.promedio_ultimo_mes
-                ? {
-                    ...resumen.promedio_ultimo_mes,
-                    collection_date: null,
-                  }
+              promedioMes
+                ? { ...promedioMes, collection_date: null }
                 : null
             }
           />
@@ -158,6 +150,7 @@ export default function Dashboard() {
             <input
               id="from"
               type="date"
+              min={DATA_FROM_DATE}
               value={from}
               onChange={(e) => setFrom(e.target.value)}
             />

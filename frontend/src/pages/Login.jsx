@@ -31,7 +31,11 @@ export default function Login() {
   return (
     <div className="auth-layout">
       <div className="auth-panel auth-panel--brand">
-        <img src="/logo-claldy.png" alt="CLALDY" className="brand-logo brand-logo--hero" />
+        <div className="auth-hero-logo">
+          <div className="brand-logo-wrap">
+            <img src="/logo-claldy.png" alt="CLALDY" className="auth-hero-logo__img" />
+          </div>
+        </div>
         <h1 className="auth-hero-title">Portal de Productores</h1>
         <p className="auth-hero-text">
           Consultá la calidad de tu leche, entregas, liquidaciones y ajustes en un solo lugar.

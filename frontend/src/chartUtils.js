@@ -132,3 +132,70 @@ export function avgDaily(grouped, valueKey = 'total') {
   const sum = grouped.reduce((acc, row) => acc + (Number(row[valueKey]) || 0), 0);
   return Math.round((sum / grouped.length) * 100) / 100;
 }
+
+export function getCurrentMonthRange() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const start = `${y}-${m}-01`;
+  const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+  const end = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+  return { start, end, label: formatMonthLabel(`${y}-${m}`) };
+}
+
+export function filterCurrentMonth(rows, dateKey) {
+  const { start, end } = getCurrentMonthRange();
+  return rows.filter((row) => {
+    const d = String(row[dateKey] || '').slice(0, 10);
+    return d >= start && d <= end;
+  });
+}
+
+export function avgCalidadMonth(rows) {
+  const monthRows = filterCurrentMonth(rows, 'collection_date');
+  if (monthRows.length === 0) return null;
+  const keys = ['fat', 'protein', 'lactose', 'ts', 'fpd', 'casein', 'urea'];
+  const result = { muestras: monthRows.length };
+  for (const key of keys) {
+    const vals = monthRows
+      .map((r) => Number(r[key]))
+      .filter((n) => Number.isFinite(n));
+    result[key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  }
+  return result;
+}
+
+export function sumRemisionesMonth(rows) {
+  const monthRows = filterCurrentMonth(rows, 'doc_date');
+  return {
+    total_litros: monthRows.reduce((s, r) => s + (Number(r.quantity) || 0), 0),
+    total_importe: monthRows.reduce((s, r) => s + (Number(r.line_total) || 0), 0),
+    entregas: monthRows.length,
+  };
+}
+
+export function sumLiquidacionesMonth(rows) {
+  const monthRows = filterCurrentMonth(rows, 'doc_date');
+  return {
+    total_litros: monthRows.reduce((s, r) => s + (Number(r.cantidad) || 0), 0),
+    total_importe: monthRows.reduce((s, r) => s + (Number(r.total) || 0), 0),
+    liquidaciones: monthRows.length,
+  };
+}
+
+export function sumReliquidacionesMonth(rows) {
+  const monthRows = filterCurrentMonth(rows, 'doc_date');
+  return {
+    total_importe: monthRows.reduce((s, r) => s + (Number(r.line_total) || 0), 0),
+    reliquidaciones: monthRows.length,
+  };
+}
+
+export function avgDailyCurrentMonth(grouped, valueKey = 'total') {
+  const { start, end } = getCurrentMonthRange();
+  const monthRows = grouped.filter((row) => {
+    const d = String(row.date || '').slice(0, 10);
+    return d >= start && d <= end;
+  });
+  return avgDaily(monthRows, valueKey);
+}
