@@ -2,13 +2,22 @@
 
 Corre **dentro de la red de la empresa**, no en Render.
 
+## Estructura
+
+| Archivo | Rol |
+|---|---|
+| `sap-common.ps1` | Módulo compartido: WinHTTP, cookies, retry, paginación, push al backend |
+| `sync.ps1` | Orquestador multi-dominio (login SAP una vez, sincroniza cada dominio, logout) |
+
+Dominios sincronizados actualmente: **CALIDAD_COMPOSICION** y **REMISION**. Ambos archivos deben estar en la misma carpeta.
+
+> `sync.py` permanece en el repo como referencia (Linux / entornos con Python).
+
 ## Requisitos
 
 - **Windows Server** con **Windows PowerShell 5.1** (incluido en el SO).
 - **No requiere instalar Python ni ningún otro runtime.**
 - Acceso de red a SAP Service Layer (`SAP_BASE_URL`) y salida HTTPS hacia el backend en Render.
-
-> `sync.py` permanece en el repo como referencia (Linux / entornos con Python).
 
 ---
 
@@ -35,7 +44,6 @@ notepad .env
 | `SYNC_FROM_DATE` | Vacío = incremental automático; `2000-01-01` = carga histórica |
 | `SYNC_OVERLAP_DAYS` | Default `7` — margen para datos retroactivos |
 | `BATCH_SIZE` | Default `500` |
-| `SAP_VERIFY_SSL` | `false` si el certificado SAP es autofirmado |
 
 ---
 
