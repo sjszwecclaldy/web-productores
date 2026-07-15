@@ -101,42 +101,67 @@ function Invoke-BackendJsonPost {
 
 function Invoke-SapRequest {
     param([string]$Method, [string]$Url, [string]$JsonBody = $null)
-    $http = New-Object -ComObject WinHttp.WinHttpRequest.5.1
-    $http.Option(4) = 13056
-    $http.SetTimeouts(10000, 10000, 10000, 30000)
-    $http.Open($Method, $Url, $false)
-    if ($Script:SapCookies.Count -gt 0) {
-        $cookieParts = @()
-        foreach ($cookieName in $Script:SapCookies.Keys) {
-            $cookieParts += ($cookieName + '=' + $Script:SapCookies[$cookieName])
+
+    $maxAttempts = 4
+    $attempt = 0
+    while ($true) {
+        $attempt++
+        $http = $null
+        try {
+            $http = New-Object -ComObject WinHttp.WinHttpRequest.5.1
+            $http.Option(4) = 13056
+            $http.SetTimeouts(10000, 10000, 10000, 30000)
+            $http.Open($Method, $Url, $false)
+            if ($Script:SapCookies.Count -gt 0) {
+                $cookieParts = @()
+                foreach ($cookieName in $Script:SapCookies.Keys) {
+                    $cookieParts += ($cookieName + '=' + $Script:SapCookies[$cookieName])
+                }
+                $http.SetRequestHeader('Cookie', ($cookieParts -join '; '))
+            }
+            if ($null -ne $JsonBody -and $JsonBody -ne '') {
+                $http.SetRequestHeader('Content-Type', 'application/json')
+                $http.Send($JsonBody)
+            }
+            else {
+                $http.Send()
+            }
         }
-        $http.SetRequestHeader('Cookie', ($cookieParts -join '; '))
-    }
-    if ($null -ne $JsonBody -and $JsonBody -ne '') {
-        $http.SetRequestHeader('Content-Type', 'application/json')
-    }
-    try {
-        if ($null -ne $JsonBody -and $JsonBody -ne '') { $http.Send($JsonBody) }
-        else { $http.Send() }
-    }
-    catch {
-        throw New-Object System.Exception("WinHTTP connection error: $($_.Exception.Message)")
-    }
-    $allHeaders = $http.GetAllResponseHeaders()
-    if ($null -ne $allHeaders -and $allHeaders -ne '') {
-        foreach ($headerLine in ($allHeaders -split "`r`n")) {
-            if ($headerLine -imatch '^Set-Cookie:\s*(.+)$') {
-                $pair = $Matches[1].Split(';')[0].Trim()
-                $ix = $pair.IndexOf('=')
-                if ($ix -gt 0) {
-                    $Script:SapCookies[$pair.Substring(0, $ix)] = $pair.Substring($ix + 1)
+        catch {
+            if ($attempt -ge $maxAttempts) {
+                throw New-Object System.Exception("WINHTTP connection error tras $attempt intentos: $($_.Exception.Message)")
+            }
+            Write-Log "SAP intento $attempt fallo (conexion): $($_.Exception.Message). Reintento en 5 s..." 'WARN'
+            Start-Sleep -Seconds 5
+            continue
+        }
+
+        $allHeaders = $http.GetAllResponseHeaders()
+        if ($null -ne $allHeaders -and $allHeaders -ne '') {
+            foreach ($headerLine in ($allHeaders -split "`r`n")) {
+                if ($headerLine -imatch '^Set-Cookie:\s*(.+)$') {
+                    $pair = $Matches[1].Split(';')[0].Trim()
+                    $ix = $pair.IndexOf('=')
+                    if ($ix -gt 0) {
+                        $Script:SapCookies[$pair.Substring(0, $ix)] = $pair.Substring($ix + 1)
+                    }
                 }
             }
         }
+
+        $statusCode = [int]$http.Status
+        if ($statusCode -ge 200 -and $statusCode -lt 300) {
+            return $http.ResponseText
+        }
+
+        if ($statusCode -ge 500 -and $attempt -lt $maxAttempts) {
+            Write-Log "SAP intento $attempt HTTP $statusCode. Reintento en 5 s..." 'WARN'
+            Start-Sleep -Seconds 5
+            continue
+        }
+
+        throw New-Object System.Exception("HTTP $statusCode $($http.StatusText) - $($http.ResponseText)")
     }
-    $statusCode = [int]$http.Status
-    if ($statusCode -ge 200 -and $statusCode -lt 300) { return $http.ResponseText }
-    throw New-Object System.Exception("HTTP $statusCode $($http.StatusText) - $($http.ResponseText)")
 }
 
 function Invoke-SapLogin {
