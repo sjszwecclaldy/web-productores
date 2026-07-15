@@ -235,9 +235,10 @@ function Get-SapRecords {
 
     $records = New-Object System.Collections.ArrayList
     $baseUrl = $SapBaseUrl.TrimEnd('/')
+    $serviceRoot = "$baseUrl/sml.svc"
     $filterValue = "U_CollectionDate ge '$FromDate'"
     $filterEncoded = [uri]::EscapeDataString($filterValue)
-    $url = "$baseUrl/sml.svc/CALIDAD_COMPOSICION?`$select=$SelectClause&`$filter=$filterEncoded"
+    $url = "$serviceRoot/CALIDAD_COMPOSICION?`$select=$SelectClause&`$filter=$filterEncoded"
     $firstRequest = $true
     $page = 0
 
@@ -282,7 +283,7 @@ function Get-SapRecords {
                 $url = $nextLink
             }
             else {
-                $url = $baseUrl + '/' + $nextLink.TrimStart('/')
+                $url = $serviceRoot + '/' + $nextLink.TrimStart('/')
             }
         }
         else {
