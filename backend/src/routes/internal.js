@@ -43,6 +43,9 @@ router.get('/sync-status', async (req, res) => {
     } else if (domain === 'liquidaciones') {
       const { rows } = await query(`SELECT MAX(doc_date)::text AS last_date FROM liquidaciones`);
       lastDate = rows[0]?.last_date || null;
+    } else if (domain === 'reliquidaciones') {
+      const { rows } = await query(`SELECT MAX(doc_date)::text AS last_date FROM reliquidaciones`);
+      lastDate = rows[0]?.last_date || null;
     } else {
       const { rows } = await query(`SELECT MAX(collection_date)::text AS last_date FROM calidad_composicion`);
       lastDate = rows[0]?.last_date || null;
@@ -361,6 +364,76 @@ router.post('/ingest/liquidaciones', async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('ingest liquidaciones error:', err);
+    res.status(500).json({ error: 'Error en ingest', detail: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+router.post('/ingest/reliquidaciones', async (req, res) => {
+  const records = req.body;
+
+  if (!Array.isArray(records) || records.length === 0) {
+    return res.status(400).json({ error: 'Se espera un array de registros' });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    let inserted = 0;
+    let updated = 0;
+    const seenProducers = new Set();
+
+    for (const rec of records) {
+      const cardCode = String(rec.card_code || rec.CardCode || '').trim();
+      if (!cardCode) continue;
+
+      const cardName = rec.card_name || rec.CardName || null;
+      if (!seenProducers.has(cardCode)) {
+        await ensureProductor(client, cardCode, cardName);
+        seenProducers.add(cardCode);
+      }
+
+      const docNum = rec.doc_num ?? rec.DocNum;
+      const docDate = rec.doc_date ?? rec.DocDate;
+      if (docNum === undefined || docNum === null || docNum === '' || !docDate) continue;
+
+      const result = await client.query(
+        `INSERT INTO reliquidaciones (
+           card_code, doc_num, num_at_card, doc_date, descripcion, line_total, synced_at
+         ) VALUES ($1,$2,$3,$4,$5,$6,NOW())
+         ON CONFLICT (card_code, doc_num)
+         DO UPDATE SET
+           num_at_card = EXCLUDED.num_at_card,
+           doc_date = EXCLUDED.doc_date,
+           descripcion = EXCLUDED.descripcion,
+           line_total = EXCLUDED.line_total,
+           synced_at = NOW()
+         RETURNING (xmax = 0) AS is_insert`,
+        [
+          cardCode,
+          parseInt(docNum, 10),
+          rec.num_at_card ?? rec.NumAtCard ?? null,
+          docDate,
+          rec.descripcion ?? rec.Dscription ?? null,
+          rec.line_total ?? rec.LineTotal ?? null,
+        ]
+      );
+
+      if (result.rows[0]?.is_insert) {
+        inserted++;
+      } else {
+        updated++;
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ inserted, updated });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('ingest reliquidaciones error:', err);
     res.status(500).json({ error: 'Error en ingest', detail: err.message });
   } finally {
     client.release();

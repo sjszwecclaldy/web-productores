@@ -100,6 +100,29 @@ $Domains = @(
                 enferm_usd  = $Row.Enferm_USD
             }
         }
+    },
+    @{
+        Name        = 'RELIQUIDACION'
+        DomainKey   = 'reliquidaciones'
+        SapService  = 'RELIQUIDACION'
+        DateField   = 'DocDate'
+        IngestPath  = '/internal/ingest/reliquidaciones'
+        SelectFields = @(
+            'DocNum', 'NumAtCard', 'DocDate', 'CardCode', 'CardName',
+            'Dscription', 'LineTotal'
+        )
+        Transform = {
+            param($Row)
+            @{
+                card_code   = $Row.CardCode
+                card_name   = $Row.CardName
+                doc_num     = $Row.DocNum
+                num_at_card = $Row.NumAtCard
+                doc_date    = $Row.DocDate
+                descripcion = $Row.Dscription
+                line_total  = $Row.LineTotal
+            }
+        }
     }
 )
 

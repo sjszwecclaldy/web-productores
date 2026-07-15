@@ -78,6 +78,21 @@ CREATE TABLE IF NOT EXISTS liquidaciones (
 CREATE INDEX IF NOT EXISTS idx_liquidaciones_card_date
   ON liquidaciones (card_code, doc_date DESC);
 
+CREATE TABLE IF NOT EXISTS reliquidaciones (
+  id SERIAL PRIMARY KEY,
+  card_code TEXT NOT NULL,
+  doc_num INTEGER NOT NULL,
+  num_at_card TEXT,
+  doc_date DATE NOT NULL,
+  descripcion TEXT,
+  line_total NUMERIC,
+  synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (card_code, doc_num)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reliquidaciones_card_date
+  ON reliquidaciones (card_code, doc_date DESC);
+
 CREATE TABLE IF NOT EXISTS sync_log (
   id SERIAL PRIMARY KEY,
   started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
