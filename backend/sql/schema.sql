@@ -37,6 +37,27 @@ CREATE TABLE IF NOT EXISTS calidad_composicion (
 CREATE INDEX IF NOT EXISTS idx_calidad_card_date
   ON calidad_composicion (card_code, collection_date DESC);
 
+CREATE TABLE IF NOT EXISTS remisiones (
+  id SERIAL PRIMARY KEY,
+  card_code TEXT NOT NULL,
+  card_name TEXT,
+  doc_entry INTEGER NOT NULL,
+  line_num INTEGER NOT NULL,
+  doc_num INTEGER,
+  doc_date DATE NOT NULL,
+  doc_due_date DATE,
+  item_code TEXT,
+  descripcion TEXT,
+  quantity NUMERIC,
+  price NUMERIC,
+  line_total NUMERIC,
+  synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (doc_entry, line_num)
+);
+
+CREATE INDEX IF NOT EXISTS idx_remisiones_card_date
+  ON remisiones (card_code, doc_date DESC);
+
 CREATE TABLE IF NOT EXISTS sync_log (
   id SERIAL PRIMARY KEY,
   started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -46,6 +67,8 @@ CREATE TABLE IF NOT EXISTS sync_log (
   status TEXT NOT NULL CHECK (status IN ('ok', 'error')),
   error_message TEXT
 );
+
+ALTER TABLE sync_log ADD COLUMN IF NOT EXISTS domain TEXT NOT NULL DEFAULT 'calidad_composicion';
 
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
   id SERIAL PRIMARY KEY,
