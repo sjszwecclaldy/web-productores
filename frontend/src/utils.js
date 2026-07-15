@@ -5,8 +5,11 @@ function fmt(val) {
 }
 
 function fmtDate(d) {
-  if (!d) return '—';
-  return new Date(d + 'T12:00:00').toLocaleDateString('es-AR');
+  if (!d) return '';
+  const dateOnly = String(d).slice(0, 10);
+  const parsed = new Date(dateOnly + 'T12:00:00');
+  if (isNaN(parsed.getTime())) return '';
+  return parsed.toLocaleDateString('es-AR');
 }
 
 export { fmt, fmtDate };

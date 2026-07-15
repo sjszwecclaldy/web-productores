@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
 
   try {
     const { rows } = await query(
-      `SELECT collection_date, job_name, job_type, product, sub,
+      `SELECT to_char(collection_date, 'YYYY-MM-DD') AS collection_date, job_name, job_type, product, sub,
               fat, protein, lactose, ts, fpd, casein, urea, remarks
        FROM calidad_composicion
        WHERE ${conditions.join(' AND ')}
@@ -45,7 +45,7 @@ router.get('/resumen', async (req, res) => {
 
   try {
     const ultimo = await query(
-      `SELECT collection_date, job_name, sub,
+      `SELECT to_char(collection_date, 'YYYY-MM-DD') AS collection_date, job_name, sub,
               fat, protein, lactose, ts, fpd, casein, urea, remarks
        FROM calidad_composicion
        WHERE card_code = $1
