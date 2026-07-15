@@ -30,6 +30,9 @@ export default function Login() {
 
   return (
     <div className="auth-card">
+      <div className="auth-brand">
+        <img src="/logo-claldy.png" alt="CLALDY" className="brand-logo brand-logo--auth" />
+      </div>
       <h2>Iniciar sesión</h2>
       <p className="subtitle">Portal de productores lecheros</p>
 

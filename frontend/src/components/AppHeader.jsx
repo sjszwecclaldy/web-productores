@@ -13,9 +13,14 @@ export default function AppHeader({ title }) {
 
   return (
     <header className="header">
-      <div>
-        <h1>{title}</h1>
-        {getCardName() && <span>{getCardName()}</span>}
+      <div className="header-brand">
+        <div className="brand-logo-wrap">
+          <img src="/logo-claldy.png" alt="CLALDY" className="brand-logo" />
+        </div>
+        <div>
+          <h1>{title}</h1>
+          {getCardName() && <span>{getCardName()}</span>}
+        </div>
       </div>
       <nav className="nav">
         <NavLink to="/" end className={linkClass}>Calidad</NavLink>

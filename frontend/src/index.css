@@ -1,14 +1,21 @@
 :root {
-  --bg: #f4f7fb;
+  --bg: #f5f8f6;
   --surface: #ffffff;
-  --text: #1a2332;
-  --muted: #5c6b7a;
-  --primary: #1e6b4f;
-  --primary-dark: #155a41;
-  --border: #dde4ec;
+  --text: #2e3d35;
+  --muted: #5a6d62;
+  --primary: #1a5c35;
+  --primary-dark: #1a5c35;
+  --primary-hover: #27753f;
+  --accent: #2d8c52;
+  --bg-tint: #e6f2eb;
+  --bg-tint-alt: #dff0e7;
+  --gold: #b8973a;
+  --border: #ccddd4;
   --danger: #c0392b;
   --radius: 12px;
-  --shadow: 0 4px 24px rgba(26, 35, 50, 0.08);
+  --shadow: 0 4px 24px rgba(26, 92, 53, 0.08);
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-display: 'DM Serif Display', Georgia, serif;
 }
 
 * {
@@ -17,7 +24,7 @@
 
 body {
   margin: 0;
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
@@ -44,10 +51,44 @@ a {
   gap: 0.75rem;
 }
 
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.brand-logo-wrap {
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.35rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand-logo {
+  display: block;
+  height: 36px;
+  width: auto;
+}
+
+.brand-logo--auth {
+  height: 80px;
+  margin: 0 auto;
+}
+
+.auth-brand {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
 .header h1 {
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 .header span {
@@ -70,11 +111,15 @@ a {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 2rem;
+  border: 1px solid var(--border);
 }
 
 .auth-card h2 {
   margin: 0 0 0.5rem;
-  font-size: 1.5rem;
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 400;
+  color: var(--primary);
 }
 
 .auth-card p.subtitle {
@@ -102,10 +147,12 @@ a {
   border-radius: 8px;
   font: inherit;
   font-size: 1rem;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .form-group input:focus {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--accent);
   border-color: transparent;
 }
 
@@ -127,7 +174,7 @@ a {
 }
 
 .btn-primary:hover {
-  background: var(--primary-dark);
+  background: var(--primary-hover);
 }
 
 .btn-primary:disabled {
@@ -143,6 +190,10 @@ a {
   font-size: 0.85rem;
 }
 
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .error-msg {
   background: #fdecea;
   color: var(--danger);
@@ -153,8 +204,8 @@ a {
 }
 
 .success-msg {
-  background: #e8f5ef;
-  color: var(--primary-dark);
+  background: var(--bg-tint);
+  color: var(--primary);
   padding: 0.65rem 0.85rem;
   border-radius: 8px;
   font-size: 0.9rem;
@@ -173,6 +224,7 @@ a {
 
 .auth-links a:hover {
   text-decoration: underline;
+  color: var(--primary-hover);
 }
 
 .cards-grid {
@@ -187,6 +239,7 @@ a {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 1.25rem;
+  border: 1px solid var(--border);
 }
 
 .stat-card h3 {
@@ -195,6 +248,7 @@ a {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--muted);
+  font-weight: 600;
 }
 
 .stat-row {
@@ -211,6 +265,7 @@ a {
 
 .stat-row .value {
   font-weight: 600;
+  color: var(--text);
 }
 
 .filters {
@@ -235,6 +290,7 @@ a {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow-x: auto;
+  border: 1px solid var(--border);
 }
 
 table {
@@ -250,7 +306,7 @@ th, td {
 }
 
 th {
-  background: #f8fafc;
+  background: var(--bg-tint);
   font-weight: 600;
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -280,6 +336,14 @@ td.num {
   .auth-card {
     margin: 1.5rem auto;
     padding: 1.5rem;
+  }
+
+  .brand-logo {
+    height: 30px;
+  }
+
+  .brand-logo--auth {
+    height: 64px;
   }
 }
 
