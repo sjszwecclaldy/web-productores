@@ -6,6 +6,7 @@ const cors = require('cors');
 const { pool } = require('./db');
 const authRoutes = require('./routes/auth');
 const calidadRoutes = require('./routes/calidad');
+const remisionesRoutes = require('./routes/remisiones');
 const internalRoutes = require('./routes/internal');
 
 const app = express();
@@ -33,6 +34,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/auth', authRoutes);
 app.use('/api/calidad-composicion', calidadRoutes);
+app.use('/api/remisiones', remisionesRoutes);
 app.use('/internal', internalRoutes);
 
 async function runMigrations() {

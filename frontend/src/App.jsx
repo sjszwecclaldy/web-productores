@@ -5,6 +5,7 @@ import Activate from './pages/Activate';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
+import Remisiones from './pages/Remisiones';
 
 function PrivateRoute({ children }) {
   return getToken() ? children : <Navigate to="/login" replace />;
@@ -47,6 +48,14 @@ export default function App() {
         element={
           <PrivateRoute>
             <Dashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/remisiones"
+        element={
+          <PrivateRoute>
+            <Remisiones />
           </PrivateRoute>
         }
       />

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, clearToken, getCardName } from '../api';
+import { api, clearToken } from '../api';
 import { fmt, fmtDate } from '../utils';
+import AppHeader from '../components/AppHeader';
 
 const METRICS = [
   { key: 'fat', label: 'Grasa %' },
@@ -96,26 +97,13 @@ export default function Dashboard() {
     }
   }
 
-  function logout() {
-    clearToken();
-    navigate('/login');
-  }
-
   if (loading && !resumen) {
     return <div className="loading">Cargando…</div>;
   }
 
   return (
     <div className="layout">
-      <header className="header">
-        <div>
-          <h1>Calidad de leche</h1>
-          {getCardName() && <span>{getCardName()}</span>}
-        </div>
-        <button type="button" className="btn btn-ghost" onClick={logout}>
-          Salir
-        </button>
-      </header>
+      <AppHeader title="Calidad de leche" />
 
       <main className="main">
         {error && <div className="error-msg">{error}</div>}
