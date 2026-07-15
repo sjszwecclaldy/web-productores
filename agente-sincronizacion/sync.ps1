@@ -397,11 +397,6 @@ function Invoke-SapLogout {
 
 $config = Read-EnvFile -Path $EnvFile
 
-$verifySsl = (Get-ConfigValue -Config $config -Name 'SAP_VERIFY_SSL' -Default 'false').ToLower()
-if ($verifySsl -ne 'true') {
-    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-}
-
 $startedAt = Get-Date
 $sapBaseUrl = $null
 $recordsFetched = 0
