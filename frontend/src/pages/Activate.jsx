@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, setToken } from '../api';
+import AuthPageShell from '../components/AuthPageShell';
 
 export default function Activate() {
   const navigate = useNavigate();
@@ -52,7 +53,7 @@ export default function Activate() {
   }
 
   return (
-    <div className="auth-card">
+    <AuthPageShell>
       <h2>Activar cuenta</h2>
       <p className="subtitle">
         Ingresá el código que recibiste por WhatsApp y elegí tu email y contraseña.
@@ -123,6 +124,6 @@ export default function Activate() {
       <div className="auth-links">
         <Link to="/login">Ya tengo cuenta — Iniciar sesión</Link>
       </div>
-    </div>
+    </AuthPageShell>
   );
 }

@@ -67,9 +67,10 @@ export default function Reliquidaciones() {
 
   return (
     <div className="layout">
-      <AppHeader title="Reliquidaciones" />
+      <AppHeader />
 
       <main className="main">
+        <h2 className="page-title">Reliquidaciones</h2>
         {error && <div className="error-msg">{error}</div>}
 
         <div className="cards-grid">

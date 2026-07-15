@@ -103,9 +103,10 @@ export default function Dashboard() {
 
   return (
     <div className="layout">
-      <AppHeader title="Calidad de leche" />
+      <AppHeader />
 
       <main className="main">
+        <h2 className="page-title">Calidad de leche</h2>
         {error && <div className="error-msg">{error}</div>}
 
         <div className="cards-grid">

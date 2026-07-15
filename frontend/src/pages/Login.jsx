@@ -29,47 +29,62 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-card">
-      <div className="auth-brand">
-        <img src="/logo-claldy.png" alt="CLALDY" className="brand-logo brand-logo--auth" />
+    <div className="auth-layout">
+      <div className="auth-panel auth-panel--brand">
+        <img src="/logo-claldy.png" alt="CLALDY" className="brand-logo brand-logo--hero" />
+        <h1 className="auth-hero-title">Portal de Productores</h1>
+        <p className="auth-hero-text">
+          Consultá la calidad de tu leche, entregas, liquidaciones y ajustes en un solo lugar.
+        </p>
+        <ul className="auth-hero-features">
+          <li>Calidad y composición</li>
+          <li>Remisiones y entregas</li>
+          <li>Liquidaciones mensuales</li>
+          <li>Reliquidaciones</li>
+        </ul>
       </div>
-      <h2>Iniciar sesión</h2>
-      <p className="subtitle">Portal de productores lecheros</p>
 
-      {error && <div className="error-msg">{error}</div>}
+      <div className="auth-panel auth-panel--form">
+        <div className="auth-form-wrap">
+          <h2>Iniciar sesión</h2>
+          <p className="subtitle">Accedé con tu email y contraseña</p>
 
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
+          {error && <div className="error-msg">{error}</div>}
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="password">Contraseña</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+            </div>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Ingresando…' : 'Ingresar'}
+            </button>
+          </form>
+
+          <div className="auth-links">
+            <Link to="/activate">Primera vez — Activar cuenta</Link>
+            <br />
+            <Link to="/forgot-password">Olvidé mi contraseña</Link>
+          </div>
         </div>
-        <div className="form-group">
-          <label htmlFor="password">Contraseña</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-        </div>
-        <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? 'Ingresando…' : 'Ingresar'}
-        </button>
-      </form>
-
-      <div className="auth-links">
-        <Link to="/activate">Primera vez — Activar cuenta</Link>
-        <br />
-        <Link to="/forgot-password">Olvidé mi contraseña</Link>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import AuthPageShell from '../components/AuthPageShell';
 
 export default function ResetPassword() {
   const [params] = useSearchParams();
@@ -39,17 +40,17 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <div className="auth-card">
+      <AuthPageShell>
         <div className="error-msg">Enlace inválido. Solicitá uno nuevo.</div>
         <div className="auth-links">
           <Link to="/forgot-password">Recuperar contraseña</Link>
         </div>
-      </div>
+      </AuthPageShell>
     );
   }
 
   return (
-    <div className="auth-card">
+    <AuthPageShell>
       <h2>Nueva contraseña</h2>
 
       {error && <div className="error-msg">{error}</div>}
@@ -81,6 +82,6 @@ export default function ResetPassword() {
           {loading ? 'Guardando…' : 'Guardar contraseña'}
         </button>
       </form>
-    </div>
+    </AuthPageShell>
   );
 }

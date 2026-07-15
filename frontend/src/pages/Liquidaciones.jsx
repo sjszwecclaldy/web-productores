@@ -67,9 +67,10 @@ export default function Liquidaciones() {
 
   return (
     <div className="layout">
-      <AppHeader title="Liquidaciones" />
+      <AppHeader />
 
       <main className="main">
+        <h2 className="page-title">Liquidaciones</h2>
         {error && <div className="error-msg">{error}</div>}
 
         <div className="cards-grid">

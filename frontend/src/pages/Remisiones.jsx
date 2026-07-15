@@ -67,9 +67,10 @@ export default function Remisiones() {
 
   return (
     <div className="layout">
-      <AppHeader title="Remisiones" />
+      <AppHeader />
 
       <main className="main">
+        <h2 className="page-title">Remisiones</h2>
         {error && <div className="error-msg">{error}</div>}
 
         <div className="cards-grid">

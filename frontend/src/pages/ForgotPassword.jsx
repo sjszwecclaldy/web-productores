@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import AuthPageShell from '../components/AuthPageShell';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -27,7 +28,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="auth-card">
+    <AuthPageShell>
       <h2>Recuperar contraseña</h2>
       <p className="subtitle">Te enviaremos un enlace para restablecer tu contraseña.</p>
 
@@ -53,6 +54,6 @@ export default function ForgotPassword() {
       <div className="auth-links">
         <Link to="/login">Volver al login</Link>
       </div>
-    </div>
+    </AuthPageShell>
   );
 }
