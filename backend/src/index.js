@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const calidadRoutes = require('./routes/calidad');
 const remisionesRoutes = require('./routes/remisiones');
 const liquidacionesRoutes = require('./routes/liquidaciones');
+const reliquidacionesRoutes = require('./routes/reliquidaciones');
 const internalRoutes = require('./routes/internal');
 
 const app = express();
@@ -37,6 +38,7 @@ app.use('/auth', authRoutes);
 app.use('/api/calidad-composicion', calidadRoutes);
 app.use('/api/remisiones', remisionesRoutes);
 app.use('/api/liquidaciones', liquidacionesRoutes);
+app.use('/api/reliquidaciones', reliquidacionesRoutes);
 app.use('/internal', internalRoutes);
 
 async function runMigrations() {

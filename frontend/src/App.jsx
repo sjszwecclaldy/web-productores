@@ -7,6 +7,7 @@ import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Remisiones from './pages/Remisiones';
 import Liquidaciones from './pages/Liquidaciones';
+import Reliquidaciones from './pages/Reliquidaciones';
 
 function PrivateRoute({ children }) {
   return getToken() ? children : <Navigate to="/login" replace />;
@@ -65,6 +66,14 @@ export default function App() {
         element={
           <PrivateRoute>
             <Liquidaciones />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/reliquidaciones"
+        element={
+          <PrivateRoute>
+            <Reliquidaciones />
           </PrivateRoute>
         }
       />

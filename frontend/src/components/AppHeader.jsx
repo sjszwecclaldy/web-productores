@@ -21,6 +21,7 @@ export default function AppHeader({ title }) {
         <NavLink to="/" end className={linkClass}>Calidad</NavLink>
         <NavLink to="/remisiones" className={linkClass}>Remisiones</NavLink>
         <NavLink to="/liquidaciones" className={linkClass}>Liquidaciones</NavLink>
+        <NavLink to="/reliquidaciones" className={linkClass}>Reliquidaciones</NavLink>
       </nav>
       <button type="button" className="btn btn-ghost" onClick={logout}>
         Salir
