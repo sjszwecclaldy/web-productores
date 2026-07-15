@@ -634,9 +634,9 @@ td.num {
 
 .loading-screen__logo {
   display: block;
-  height: 88px;
+  height: min(280px, 38vh);
   width: auto;
-  max-width: 180px;
+  max-width: min(420px, 85vw);
   object-fit: contain;
   animation: logo-pulse 1.2s ease-in-out infinite;
 }

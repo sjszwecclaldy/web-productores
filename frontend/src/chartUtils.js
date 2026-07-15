@@ -23,7 +23,7 @@ export function formatMonthLabel(ym) {
   const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   const idx = parseInt(m, 10) - 1;
   if (idx < 0 || idx > 11) return ym;
-  return `${months[idx]} ${y.slice(2)}`;
+  return `${months[idx]} ${y}`;
 }
 
 export function groupSumByDate(rows, dateKey, valueKey) {
