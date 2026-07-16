@@ -45,3 +45,14 @@ export function IconReliquidaciones() {
     </svg>
   );
 }
+
+export function IconComparativa() {
+  return (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <line x1="3" y1="21" x2="21" y2="21" />
+      <rect x="5" y="10" width="3.5" height="8" rx="0.5" />
+      <rect x="10.25" y="5" width="3.5" height="13" rx="0.5" />
+      <rect x="15.5" y="13" width="3.5" height="5" rx="0.5" />
+    </svg>
+  );
+}

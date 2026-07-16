@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { getToken } from './api';
+import { getToken, isAdmin } from './api';
 import AdminProducerGate from './components/AdminProducerGate';
+import PanelComparativo from './pages/PanelComparativo';
 import Login from './pages/Login';
 import Activate from './pages/Activate';
 import ForgotPassword from './pages/ForgotPassword';
@@ -17,6 +18,10 @@ function PrivateRoute({ children }) {
 
 function PublicRoute({ children }) {
   return getToken() ? <Navigate to="/" replace /> : children;
+}
+
+function RequireAdmin({ children }) {
+  return isAdmin() ? children : <Navigate to="/" replace />;
 }
 
 export default function App() {
@@ -95,6 +100,16 @@ export default function App() {
             <AdminProducerGate>
               <Reliquidaciones />
             </AdminProducerGate>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/comparativa"
+        element={
+          <PrivateRoute>
+            <RequireAdmin>
+              <PanelComparativo />
+            </RequireAdmin>
           </PrivateRoute>
         }
       />

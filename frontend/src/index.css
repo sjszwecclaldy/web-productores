@@ -832,3 +832,90 @@ th.num {
   outline: 2px solid var(--primary);
   border-color: transparent;
 }
+
+/* Combo de búsqueda de productor (admin) */
+.producer-combo {
+  position: relative;
+}
+
+.producer-combo__input {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  width: 220px;
+  max-width: 40vw;
+}
+
+.producer-combo__input:focus {
+  outline: 2px solid var(--primary);
+  border-color: transparent;
+}
+
+.producer-combo__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.producer-combo__item {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.producer-combo__item:hover {
+  background: var(--bg-tint, #eef3f0);
+}
+
+.producer-combo__code {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+/* Panel comparativo (admin) */
+.comparativa-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.section-title {
+  font-family: var(--font-display, inherit);
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: var(--primary);
+  margin: 1.75rem 0 0.75rem;
+}
+
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+th.sortable.sorted {
+  color: var(--primary);
+}
+
+.muted-code {
+  color: var(--muted);
+  font-size: 0.82rem;
+}

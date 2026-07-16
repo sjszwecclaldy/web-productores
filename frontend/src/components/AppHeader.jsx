@@ -5,11 +5,12 @@ import {
   clearToken,
   getCardName,
   isAdmin,
-  getAdminCardCode,
+  getAdminCardName,
   setAdminProducer,
 } from '../api';
 import {
   IconCalidad,
+  IconComparativa,
   IconLiquidaciones,
   IconReliquidaciones,
   IconRemisiones,
@@ -24,9 +25,20 @@ const NAV_ITEMS = [
   { to: '/reliquidaciones', label: 'Reliquidaciones', Icon: IconReliquidaciones },
 ];
 
+const ADMIN_NAV_ITEM = { to: '/comparativa', label: 'Comparativa', Icon: IconComparativa };
+
+function normalize(s) {
+  return String(s)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 function ProducerSelector() {
   const [productores, setProductores] = useState([]);
-  const selected = getAdminCardCode();
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const seleccionado = getAdminCardName();
 
   useEffect(() => {
     let active = true;
@@ -42,29 +54,50 @@ function ProducerSelector() {
     };
   }, []);
 
-  function handleChange(e) {
-    const code = e.target.value;
-    if (!code) return;
-    const prod = productores.find((p) => p.card_code === code);
-    setAdminProducer(code, prod ? prod.card_name : code);
+  const filtrados = q
+    ? productores.filter((p) => normalize(`${p.card_name} ${p.card_code}`).includes(normalize(q)))
+    : productores;
+
+  function elegir(p) {
+    setAdminProducer(p.card_code, p.card_name);
     window.location.reload();
   }
 
   return (
-    <select className="producer-select" value={selected} onChange={handleChange}>
-      <option value="">Seleccioná un productor…</option>
-      {productores.map((p) => (
-        <option key={p.card_code} value={p.card_code}>
-          {p.card_name} ({p.card_code})
-        </option>
-      ))}
-    </select>
+    <div className="producer-combo">
+      <input
+        className="producer-combo__input"
+        type="text"
+        placeholder={seleccionado || 'Buscar productor…'}
+        value={q}
+        onChange={(e) => {
+          setQ(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+      />
+      {open && filtrados.length > 0 && (
+        <ul className="producer-combo__list">
+          {filtrados.slice(0, 50).map((p) => (
+            <li
+              key={p.card_code}
+              className="producer-combo__item"
+              onMouseDown={() => elegir(p)}
+            >
+              {p.card_name} <span className="producer-combo__code">({p.card_code})</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
 export default function AppHeader() {
   const navigate = useNavigate();
   const admin = isAdmin();
+  const navItems = admin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
 
   function logout() {
     clearToken();
@@ -100,7 +133,7 @@ export default function AppHeader() {
         </div>
       </div>
       <nav className="nav-tabs" aria-label="Secciones del portal">
-        {NAV_ITEMS.map(({ to, end, label, Icon }) => (
+        {navItems.map(({ to, end, label, Icon }) => (
           <NavLink key={to} to={to} end={end} className={linkClass}>
             <Icon />
             <span>{label}</span>
