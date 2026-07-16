@@ -20,11 +20,10 @@ function abreviar(nombre) {
 }
 
 function niceMax(dataMax) {
-  const v = Number(dataMax) * 1.08;
+  const v = Number(dataMax) * 1.2;
   if (!Number.isFinite(v) || v <= 0) return 1;
-  const mag = Math.pow(10, Math.floor(Math.log10(v)));
-  const step = mag / 4;
-  return Math.ceil(v / step) * step;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)) - 1);
+  return Math.ceil(v / mag) * mag;
 }
 
 function YTick({ x, y, payload }) {
