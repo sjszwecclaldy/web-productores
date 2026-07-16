@@ -156,7 +156,7 @@ export default function PanelComparativo() {
               </button>
             ))}
           </div>
-          <form className="filters" onSubmit={aplicarRango}>
+          <form className="comparativa-rango" onSubmit={aplicarRango}>
             <div className="form-group">
               <label htmlFor="desde">Desde</label>
               <input id="desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
@@ -165,7 +165,7 @@ export default function PanelComparativo() {
               <label htmlFor="hasta">Hasta</label>
               <input id="hasta" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
             </div>
-            <button type="submit" className="btn btn-primary" style={{ width: 'auto' }}>
+            <button type="submit" className="btn btn-primary">
               Aplicar rango
             </button>
           </form>
