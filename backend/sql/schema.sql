@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS productores (
   last_login_at TIMESTAMPTZ
 );
 
+ALTER TABLE productores ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'productor'
+  CHECK (role IN ('productor', 'admin'));
+
 CREATE TABLE IF NOT EXISTS calidad_composicion (
   id SERIAL PRIMARY KEY,
   card_code TEXT NOT NULL,

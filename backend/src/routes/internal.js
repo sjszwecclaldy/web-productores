@@ -1,4 +1,5 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const { pool, query } = require('../db');
 const { requireApiKey } = require('../middleware/apiKey');
 const { generateActivationCode, activationExpiryDate } = require('../utils/tokens');
@@ -437,6 +438,39 @@ router.post('/ingest/reliquidaciones', async (req, res) => {
     res.status(500).json({ error: 'Error en ingest', detail: err.message });
   } finally {
     client.release();
+  }
+});
+
+router.post('/crear-admin', async (req, res) => {
+  const { email, password, card_name } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Faltan email o password' });
+  }
+  if (String(password).length < 8) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+  }
+
+  const normalizedEmail = String(email).trim().toLowerCase();
+
+  try {
+    const passwordHash = await bcrypt.hash(String(password), 10);
+    const { rows } = await query(
+      `INSERT INTO productores (card_code, card_name, email, password_hash, estado, role)
+       VALUES ('ADMIN', $1, $2, $3, 'activo', 'admin')
+       ON CONFLICT (card_code) DO UPDATE SET
+         card_name = EXCLUDED.card_name,
+         email = EXCLUDED.email,
+         password_hash = EXCLUDED.password_hash,
+         estado = 'activo',
+         role = 'admin'
+       RETURNING card_code, card_name, email, role`,
+      [card_name || 'Administrador', normalizedEmail, passwordHash]
+    );
+    res.json({ ok: true, admin: rows[0] });
+  } catch (err) {
+    console.error('crear-admin error:', err);
+    res.status(500).json({ error: 'Error interno', detail: err.message });
   }
 });
 

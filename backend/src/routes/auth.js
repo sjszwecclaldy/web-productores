@@ -80,12 +80,12 @@ router.post('/activate', authLimiter, async (req, res) => {
     );
 
     const token = jwt.sign(
-      { sub: productor.id, card_code: normalizedCode, email: normalizedEmail },
+      { sub: productor.id, card_code: normalizedCode, email: normalizedEmail, role: 'productor' },
       process.env.JWT_SECRET,
       { expiresIn: JWT_EXPIRY }
     );
 
-    res.json({ token, card_code: normalizedCode });
+    res.json({ token, card_code: normalizedCode, role: 'productor' });
   } catch (err) {
     console.error('activate error:', err);
     res.status(500).json({ error: 'Error interno' });
@@ -103,7 +103,7 @@ router.post('/login', authLimiter, async (req, res) => {
 
   try {
     const { rows } = await query(
-      `SELECT id, card_code, card_name, password_hash, estado
+      `SELECT id, card_code, card_name, password_hash, estado, role
        FROM productores WHERE email = $1`,
       [normalizedEmail]
     );
@@ -130,7 +130,7 @@ router.post('/login', authLimiter, async (req, res) => {
     await query('UPDATE productores SET last_login_at = NOW() WHERE id = $1', [productor.id]);
 
     const token = jwt.sign(
-      { sub: productor.id, card_code: productor.card_code, email: normalizedEmail },
+      { sub: productor.id, card_code: productor.card_code, email: normalizedEmail, role: productor.role },
       process.env.JWT_SECRET,
       { expiresIn: JWT_EXPIRY }
     );
@@ -139,6 +139,7 @@ router.post('/login', authLimiter, async (req, res) => {
       token,
       card_code: productor.card_code,
       card_name: productor.card_name,
+      role: productor.role,
     });
   } catch (err) {
     console.error('login error:', err);

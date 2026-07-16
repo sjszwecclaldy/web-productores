@@ -1,6 +1,6 @@
 const express = require('express');
 const { query } = require('../db');
-const { requireJwt } = require('../middleware/auth');
+const { requireJwt, resolveCardCode } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -9,7 +9,7 @@ router.use(requireJwt);
 const REAL = '(COALESCE(cantidad, 0) <> 0 OR COALESCE(total, 0) <> 0)';
 
 router.get('/', async (req, res) => {
-  const { card_code } = req.user;
+  const card_code = resolveCardCode(req);
   const { from, to } = req.query;
 
   const conditions = ['card_code = $1', REAL];
@@ -42,7 +42,7 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/resumen', async (req, res) => {
-  const { card_code } = req.user;
+  const card_code = resolveCardCode(req);
 
   try {
     const ultima = await query(
