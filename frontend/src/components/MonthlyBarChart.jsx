@@ -65,7 +65,7 @@ export default function MonthlyBarChart({
           wrapperStyle={{ fontSize: 12 }}
         />
         {series.map(({ key, color }) => (
-          <Bar key={key} dataKey={key} name={key} radius={[4, 4, 0, 0]} maxBarSize={32}>
+          <Bar key={key} dataKey={key} name={key} fill={color} radius={[4, 4, 0, 0]} maxBarSize={32}>
             {data.map((entry) => (
               <Cell
                 key={`${key}-${entry.month}`}
