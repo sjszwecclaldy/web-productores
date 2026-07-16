@@ -9,6 +9,7 @@ const router = express.Router();
 router.use(requireApiKey);
 
 async function ensureProductor(client, cardCode, cardName) {
+  if (cardCode === 'ADMIN') return; // 'ADMIN' reservado para la cuenta administrativa
   const existing = await client.query(
     'SELECT id, card_name FROM productores WHERE card_code = $1',
     [cardCode]
@@ -454,6 +455,16 @@ router.post('/crear-admin', async (req, res) => {
   const normalizedEmail = String(email).trim().toLowerCase();
 
   try {
+    const emailEnUso = await query(
+      "SELECT card_code FROM productores WHERE email = $1 AND card_code <> 'ADMIN'",
+      [normalizedEmail]
+    );
+    if (emailEnUso.rows.length > 0) {
+      return res.status(409).json({
+        error: `El email ya está en uso por el productor ${emailEnUso.rows[0].card_code}. Liberá esa cuenta antes de usarlo para el admin.`,
+      });
+    }
+
     const passwordHash = await bcrypt.hash(String(password), 10);
     const { rows } = await query(
       `INSERT INTO productores (card_code, card_name, email, password_hash, estado, role)
@@ -470,7 +481,51 @@ router.post('/crear-admin', async (req, res) => {
     res.json({ ok: true, admin: rows[0] });
   } catch (err) {
     console.error('crear-admin error:', err);
-    res.status(500).json({ error: 'Error interno', detail: err.message });
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.post('/liberar-cuenta', async (req, res) => {
+  const { email, card_code } = req.body;
+
+  if (!email && !card_code) {
+    return res.status(400).json({ error: 'Se requiere email o card_code' });
+  }
+
+  try {
+    const finder = email
+      ? await query('SELECT id, card_code, role FROM productores WHERE email = $1', [String(email).trim().toLowerCase()])
+      : await query('SELECT id, card_code, role FROM productores WHERE card_code = $1', [String(card_code).trim()]);
+
+    if (finder.rows.length === 0) {
+      return res.status(404).json({ error: 'No se encontró productor con ese email o card_code' });
+    }
+
+    const prod = finder.rows[0];
+    if (prod.role === 'admin') {
+      return res.status(400).json({ error: 'No se puede liberar una cuenta de administrador' });
+    }
+
+    const code = generateActivationCode();
+    const expiry = activationExpiryDate();
+
+    await query(
+      `UPDATE productores
+       SET email = NULL, password_hash = NULL, estado = 'pendiente_activacion',
+           activation_code = $2, activation_code_expira = $3
+       WHERE id = $1`,
+      [prod.id, code, expiry]
+    );
+
+    res.json({
+      ok: true,
+      card_code: prod.card_code,
+      estado: 'pendiente_activacion',
+      nuevo_activation_code: code,
+    });
+  } catch (err) {
+    console.error('liberar-cuenta error:', err);
+    res.status(500).json({ error: 'Error interno' });
   }
 });
 
