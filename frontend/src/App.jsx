@@ -5,7 +5,7 @@ import Activate from './pages/Activate';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Resumen from './pages/Resumen';
-import Dashboard from './pages/Dashboard';
+import Composicion from './pages/Composicion';
 import Remisiones from './pages/Remisiones';
 import Liquidaciones from './pages/Liquidaciones';
 import Reliquidaciones from './pages/Reliquidaciones';
@@ -55,13 +55,14 @@ export default function App() {
         }
       />
       <Route
-        path="/calidad"
+        path="/composicion"
         element={
           <PrivateRoute>
-            <Dashboard />
+            <Composicion />
           </PrivateRoute>
         }
       />
+      <Route path="/calidad" element={<Navigate to="/composicion" replace />} />
       <Route
         path="/remisiones"
         element={

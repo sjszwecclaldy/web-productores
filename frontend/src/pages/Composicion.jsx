@@ -57,7 +57,7 @@ function ResumenCard({ title, data }) {
   );
 }
 
-export default function Dashboard() {
+export default function Composicion() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
   const [chartRegistros, setChartRegistros] = useState([]);

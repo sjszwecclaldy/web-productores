@@ -330,25 +330,6 @@ a {
   font-size: 0.95rem;
 }
 
-/* --- Legacy header (removed; kept brand helpers) --------------------------- */
-
-.header {
-  background: var(--primary);
-  color: white;
-  padding: 1rem 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-}
-
 .brand-logo-wrap {
   background: #fff;
   border-radius: 10px;
@@ -365,59 +346,12 @@ a {
   width: auto;
 }
 
-.brand-logo--auth {
-  height: 80px;
-  margin: 0 auto;
-}
-
-.auth-brand {
-  text-align: center;
-  margin-bottom: 1.25rem;
-}
-
-.header h1 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-}
-
-.header span {
-  font-size: 0.9rem;
-  opacity: 0.9;
-}
-
 .main {
   flex: 1;
   max-width: 1100px;
   width: 100%;
   margin: 0 auto;
   padding: 1.5rem;
-}
-
-.auth-card {
-  max-width: 420px;
-  margin: 3rem auto;
-  background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 2rem;
-  border: 1px solid var(--border);
-}
-
-.auth-card h2 {
-  margin: 0 0 0.5rem;
-  font-family: var(--font-display);
-  font-size: 1.65rem;
-  font-weight: 400;
-  color: var(--primary);
-}
-
-.auth-card p.subtitle {
-  margin: 0 0 1.5rem;
-  color: var(--muted);
-  font-size: 0.95rem;
 }
 
 .form-group {
@@ -721,17 +655,8 @@ th.num {
 }
 
 @media (max-width: 600px) {
-  .auth-card {
-    margin: 1.5rem auto;
-    padding: 1.5rem;
-  }
-
   .brand-logo {
     height: 30px;
-  }
-
-  .brand-logo--auth {
-    height: 64px;
   }
 
   .topbar {
@@ -750,31 +675,6 @@ th.num {
   .page-title {
     font-size: 1.25rem;
   }
-}
-
-.nav {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.nav-link {
-  color: rgba(255, 255, 255, 0.85);
-  text-decoration: none;
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  font-weight: 500;
-  font-size: 0.95rem;
-  transition: background 0.15s ease;
-}
-
-.nav-link:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-.nav-link.active {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
 }
 
 /* --- Charts (Fase 3) ------------------------------------------------------- */
