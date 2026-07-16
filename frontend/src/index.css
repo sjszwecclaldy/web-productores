@@ -814,3 +814,21 @@ th.num {
   border: none;
   border-radius: 0;
 }
+
+/* Selector de productor (solo admin) */
+.producer-select {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  max-width: 260px;
+  cursor: pointer;
+}
+
+.producer-select:focus {
+  outline: 2px solid var(--primary);
+  border-color: transparent;
+}

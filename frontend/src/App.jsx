@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { getToken } from './api';
+import AdminProducerGate from './components/AdminProducerGate';
 import Login from './pages/Login';
 import Activate from './pages/Activate';
 import ForgotPassword from './pages/ForgotPassword';
@@ -50,7 +51,9 @@ export default function App() {
         path="/"
         element={
           <PrivateRoute>
-            <Resumen />
+            <AdminProducerGate>
+              <Resumen />
+            </AdminProducerGate>
           </PrivateRoute>
         }
       />
@@ -58,7 +61,9 @@ export default function App() {
         path="/composicion"
         element={
           <PrivateRoute>
-            <Composicion />
+            <AdminProducerGate>
+              <Composicion />
+            </AdminProducerGate>
           </PrivateRoute>
         }
       />
@@ -67,7 +72,9 @@ export default function App() {
         path="/remisiones"
         element={
           <PrivateRoute>
-            <Remisiones />
+            <AdminProducerGate>
+              <Remisiones />
+            </AdminProducerGate>
           </PrivateRoute>
         }
       />
@@ -75,7 +82,9 @@ export default function App() {
         path="/liquidaciones"
         element={
           <PrivateRoute>
-            <Liquidaciones />
+            <AdminProducerGate>
+              <Liquidaciones />
+            </AdminProducerGate>
           </PrivateRoute>
         }
       />
@@ -83,7 +92,9 @@ export default function App() {
         path="/reliquidaciones"
         element={
           <PrivateRoute>
-            <Reliquidaciones />
+            <AdminProducerGate>
+              <Reliquidaciones />
+            </AdminProducerGate>
           </PrivateRoute>
         }
       />

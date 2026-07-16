@@ -1,5 +1,13 @@
+import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { clearToken, getCardName } from '../api';
+import {
+  api,
+  clearToken,
+  getCardName,
+  isAdmin,
+  getAdminCardCode,
+  setAdminProducer,
+} from '../api';
 import {
   IconCalidad,
   IconLiquidaciones,
@@ -16,8 +24,47 @@ const NAV_ITEMS = [
   { to: '/reliquidaciones', label: 'Reliquidaciones', Icon: IconReliquidaciones },
 ];
 
+function ProducerSelector() {
+  const [productores, setProductores] = useState([]);
+  const selected = getAdminCardCode();
+
+  useEffect(() => {
+    let active = true;
+    api('/api/admin/productores')
+      .then((data) => {
+        if (active) setProductores(data.data || []);
+      })
+      .catch(() => {
+        if (active) setProductores([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  function handleChange(e) {
+    const code = e.target.value;
+    if (!code) return;
+    const prod = productores.find((p) => p.card_code === code);
+    setAdminProducer(code, prod ? prod.card_name : code);
+    window.location.reload();
+  }
+
+  return (
+    <select className="producer-select" value={selected} onChange={handleChange}>
+      <option value="">Seleccioná un productor…</option>
+      {productores.map((p) => (
+        <option key={p.card_code} value={p.card_code}>
+          {p.card_name} ({p.card_code})
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export default function AppHeader() {
   const navigate = useNavigate();
+  const admin = isAdmin();
 
   function logout() {
     clearToken();
@@ -39,7 +86,14 @@ export default function AppHeader() {
           </div>
         </div>
         <div className="topbar-actions">
-          {getCardName() && <span className="topbar-user">{getCardName()}</span>}
+          {admin ? (
+            <>
+              <span className="topbar-user">Administrador</span>
+              <ProducerSelector />
+            </>
+          ) : (
+            getCardName() && <span className="topbar-user">{getCardName()}</span>
+          )}
           <button type="button" className="btn btn-ghost" onClick={logout}>
             Salir
           </button>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api, setToken, setCardName } from '../api';
+import { api, setToken, setCardName, setRole, clearAdminProducer } from '../api';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -20,6 +20,8 @@ export default function Login() {
       });
       setToken(data.token);
       if (data.card_name) setCardName(data.card_name);
+      setRole(data.role);
+      clearAdminProducer();
       navigate('/');
     } catch (err) {
       setError(err.message);
