@@ -568,14 +568,15 @@ th.num {
 }
 
 .loading-screen__badge {
-  width: min(360px, 72vw);
-  height: min(360px, 72vw);
-  border-radius: 28px;
+  width: min(300px, 68vw);
+  height: min(300px, 68vw);
+  border-radius: 36px;
   background: #ffffff;
+  box-shadow: 0 12px 40px rgba(26, 92, 53, 0.14);
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: logo-pulse 1.2s ease-in-out infinite;
+  animation: logo-pulse 1.4s ease-in-out infinite;
 }
 
 .loading-screen__logo {

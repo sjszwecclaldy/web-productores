@@ -1,7 +1,7 @@
 import { formatMonthLabel } from '../chartUtils';
 import { fmtDate } from '../utils';
 
-export default function SelectedPeriodBanner({ label, onClear }) {
+function SelectedPeriodBanner({ label, onClear }) {
   if (!label) return null;
 
   return (
@@ -16,7 +16,7 @@ export default function SelectedPeriodBanner({ label, onClear }) {
   );
 }
 
-export function SelectedDateBanner({ date, onClear }) {
+export default function SelectedDateBanner({ date, onClear }) {
   if (!date) return null;
   return <SelectedPeriodBanner label={fmtDate(date)} onClear={onClear} />;
 }
@@ -25,5 +25,3 @@ export function SelectedMonthBanner({ month, onClear }) {
   if (!month) return null;
   return <SelectedPeriodBanner label={formatMonthLabel(month)} onClear={onClear} />;
 }
-
-export default SelectedDateBanner;
