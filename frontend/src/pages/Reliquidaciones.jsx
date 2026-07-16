@@ -1,17 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
+import {
+  CHART_COLORS,
+  formatMonthLabel,
+  getCurrentMonthRange,
+  groupSumByMonth,
+  rowsOnMonth,
+  sumReliquidacionesMonth,
+  toggleSelectedMonth,
+} from '../chartUtils';
 import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
 import LoadingScreen from '../components/LoadingScreen';
 import MonthlyBarChart from '../components/MonthlyBarChart';
-import { CHART_COLORS, getCurrentMonthRange, groupSumByMonth, sumReliquidacionesMonth } from '../chartUtils';
+import { SelectedMonthBanner } from '../components/SelectedDateBanner';
 
 export default function Reliquidaciones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
   const [chartRegistros, setChartRegistros] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState(DATA_FROM_DATE);
@@ -53,6 +63,7 @@ export default function Reliquidaciones() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSelectedMonth(null);
     try {
       await loadRegistros();
     } catch (err) {
@@ -67,12 +78,33 @@ export default function Reliquidaciones() {
     return rows.map((r) => ({ ...r, importe: r.total }));
   }, [chartRegistros]);
 
+  const selectedRows = useMemo(
+    () => rowsOnMonth(chartRegistros, 'doc_date', selectedMonth),
+    [chartRegistros, selectedMonth]
+  );
+
+  const tablaRegistros = useMemo(
+    () => (selectedMonth ? rowsOnMonth(registros, 'doc_date', selectedMonth) : registros),
+    [registros, selectedMonth]
+  );
+
+  const totalesMes = useMemo(() => {
+    if (!selectedMonth) return sumReliquidacionesMonth(chartRegistros);
+    return {
+      total_importe: selectedRows.reduce((sum, row) => sum + (Number(row.line_total) || 0), 0),
+      reliquidaciones: selectedRows.length,
+    };
+  }, [selectedMonth, selectedRows, chartRegistros]);
+
+  function handleMonthSelect(month) {
+    setSelectedMonth((current) => toggleSelectedMonth(current, month));
+  }
+
   if (loading) {
     return <LoadingScreen />;
   }
 
-  const ultima = chartRegistros[0] || null;
-  const totales = sumReliquidacionesMonth(chartRegistros);
+  const ultima = selectedMonth ? selectedRows[0] || null : chartRegistros[0] || null;
 
   return (
     <div className="layout">
@@ -82,9 +114,15 @@ export default function Reliquidaciones() {
         <h2 className="page-title">Reliquidaciones</h2>
         {error && <div className="error-msg">{error}</div>}
 
+        <SelectedMonthBanner month={selectedMonth} onClear={() => setSelectedMonth(null)} />
+
         <div className="cards-grid">
           <div className="stat-card">
-            <h3>Última reliquidación</h3>
+            <h3>
+              {selectedMonth
+                ? `Reliquidacion de ${formatMonthLabel(selectedMonth)}`
+                : 'Última reliquidación'}
+            </h3>
             {ultima ? (
               <>
                 <p style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: 'var(--muted)' }}>
@@ -102,11 +140,15 @@ export default function Reliquidaciones() {
           </div>
 
           <div className="stat-card">
-            <h3>Totales mes corriente ({monthLabel})</h3>
-            {totales.reliquidaciones > 0 ? (
+            <h3>
+              {selectedMonth
+                ? `Totales ${formatMonthLabel(selectedMonth)}`
+                : `Totales mes corriente (${monthLabel})`}
+            </h3>
+            {totalesMes.reliquidaciones > 0 ? (
               <>
-                <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totales.total_importe)}</span></div>
-                <div className="stat-row"><span>Reliquidaciones</span><span className="value">{totales.reliquidaciones}</span></div>
+                <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totalesMes.total_importe)}</span></div>
+                <div className="stat-row"><span>Reliquidaciones</span><span className="value">{totalesMes.reliquidaciones}</span></div>
               </>
             ) : (
               <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
@@ -117,6 +159,8 @@ export default function Reliquidaciones() {
         <ChartPanel title="Ajustes por mes (ultimo ano)">
           <MonthlyBarChart
             data={chartMonthly}
+            selectedMonth={selectedMonth}
+            onMonthSelect={handleMonthSelect}
             bars={[{ key: 'importe', label: 'Importe', color: CHART_COLORS.gold }]}
           />
         </ChartPanel>
@@ -136,8 +180,12 @@ export default function Reliquidaciones() {
         </form>
 
         <div className="table-wrap">
-          {registros.length === 0 ? (
-            <div className="empty-state">No hay reliquidaciones para el período seleccionado.</div>
+          {tablaRegistros.length === 0 ? (
+            <div className="empty-state">
+              {selectedMonth
+                ? 'No hay reliquidaciones para el mes seleccionado.'
+                : 'No hay reliquidaciones para el período seleccionado.'}
+            </div>
           ) : (
             <table>
               <thead>
@@ -145,11 +193,11 @@ export default function Reliquidaciones() {
                   <th>Fecha</th>
                   <th>Documento</th>
                   <th>Concepto</th>
-                  <th>Importe</th>
+                  <th className="num">Importe</th>
                 </tr>
               </thead>
               <tbody>
-                {registros.map((r, i) => (
+                {tablaRegistros.map((r, i) => (
                   <tr key={`${r.doc_num}-${i}`}>
                     <td>{fmtDate(r.doc_date)}</td>
                     <td>{r.doc_num}</td>

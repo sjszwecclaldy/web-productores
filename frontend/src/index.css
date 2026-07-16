@@ -607,7 +607,8 @@ th {
   white-space: nowrap;
 }
 
-td.num {
+td.num,
+th.num {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -635,8 +636,8 @@ td.num {
 .loading-screen__badge {
   width: min(360px, 72vw);
   height: min(360px, 72vw);
-  border-radius: 50%;
-  background: #f2f5f3;
+  border-radius: 28px;
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;

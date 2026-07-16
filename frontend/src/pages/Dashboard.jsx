@@ -215,13 +215,13 @@ export default function Dashboard() {
                 <tr>
                   <th>Fecha</th>
                   <th>Sub</th>
-                  <th>Grasa</th>
-                  <th>Proteína</th>
-                  <th>Lactosa</th>
-                  <th>ST</th>
-                  <th>FPD</th>
-                  <th>Caseína</th>
-                  <th>Urea</th>
+                  <th className="num">Grasa</th>
+                  <th className="num">Proteína</th>
+                  <th className="num">Lactosa</th>
+                  <th className="num">ST</th>
+                  <th className="num">FPD</th>
+                  <th className="num">Caseína</th>
+                  <th className="num">Urea</th>
                   <th>Obs.</th>
                 </tr>
               </thead>

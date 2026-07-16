@@ -1,17 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
+import {
+  formatMonthLabel,
+  getCurrentMonthRange,
+  groupDualByMonth,
+  rowsOnMonth,
+  sumLiquidacionesMonth,
+  toggleSelectedMonth,
+} from '../chartUtils';
 import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
 import LoadingScreen from '../components/LoadingScreen';
 import MonthlyBarChart from '../components/MonthlyBarChart';
-import { getCurrentMonthRange, groupDualByMonth, sumLiquidacionesMonth } from '../chartUtils';
+import { SelectedMonthBanner } from '../components/SelectedDateBanner';
 
 export default function Liquidaciones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
   const [chartRegistros, setChartRegistros] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState(DATA_FROM_DATE);
@@ -53,6 +62,7 @@ export default function Liquidaciones() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSelectedMonth(null);
     try {
       await loadRegistros();
     } catch (err) {
@@ -67,12 +77,34 @@ export default function Liquidaciones() {
     [chartRegistros]
   );
 
+  const selectedRows = useMemo(
+    () => rowsOnMonth(chartRegistros, 'doc_date', selectedMonth),
+    [chartRegistros, selectedMonth]
+  );
+
+  const tablaRegistros = useMemo(
+    () => (selectedMonth ? rowsOnMonth(registros, 'doc_date', selectedMonth) : registros),
+    [registros, selectedMonth]
+  );
+
+  const totalesMes = useMemo(() => {
+    if (!selectedMonth) return sumLiquidacionesMonth(chartRegistros);
+    return {
+      total_litros: selectedRows.reduce((sum, row) => sum + (Number(row.cantidad) || 0), 0),
+      total_importe: selectedRows.reduce((sum, row) => sum + (Number(row.total) || 0), 0),
+      liquidaciones: selectedRows.length,
+    };
+  }, [selectedMonth, selectedRows, chartRegistros]);
+
+  function handleMonthSelect(month) {
+    setSelectedMonth((current) => toggleSelectedMonth(current, month));
+  }
+
   if (loading) {
     return <LoadingScreen />;
   }
 
-  const ultima = chartRegistros[0] || null;
-  const totales = sumLiquidacionesMonth(chartRegistros);
+  const ultima = selectedMonth ? selectedRows[0] || null : chartRegistros[0] || null;
 
   return (
     <div className="layout">
@@ -82,9 +114,15 @@ export default function Liquidaciones() {
         <h2 className="page-title">Liquidaciones</h2>
         {error && <div className="error-msg">{error}</div>}
 
+        <SelectedMonthBanner month={selectedMonth} onClear={() => setSelectedMonth(null)} />
+
         <div className="cards-grid">
           <div className="stat-card">
-            <h3>Última liquidación</h3>
+            <h3>
+              {selectedMonth
+                ? `Liquidacion de ${formatMonthLabel(selectedMonth)}`
+                : 'Última liquidación'}
+            </h3>
             {ultima ? (
               <>
                 <p style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: 'var(--muted)' }}>
@@ -104,12 +142,16 @@ export default function Liquidaciones() {
           </div>
 
           <div className="stat-card">
-            <h3>Totales mes corriente ({monthLabel})</h3>
-            {totales.liquidaciones > 0 ? (
+            <h3>
+              {selectedMonth
+                ? `Totales ${formatMonthLabel(selectedMonth)}`
+                : `Totales mes corriente (${monthLabel})`}
+            </h3>
+            {totalesMes.liquidaciones > 0 ? (
               <>
-                <div className="stat-row"><span>Litros liquidados</span><span className="value">{fmt(totales.total_litros)}</span></div>
-                <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totales.total_importe)}</span></div>
-                <div className="stat-row"><span>Liquidaciones</span><span className="value">{totales.liquidaciones}</span></div>
+                <div className="stat-row"><span>Litros liquidados</span><span className="value">{fmt(totalesMes.total_litros)}</span></div>
+                <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totalesMes.total_importe)}</span></div>
+                <div className="stat-row"><span>Liquidaciones</span><span className="value">{totalesMes.liquidaciones}</span></div>
               </>
             ) : (
               <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
@@ -120,6 +162,8 @@ export default function Liquidaciones() {
         <ChartPanel title="Importe y litros por mes (ultimo ano)">
           <MonthlyBarChart
             data={chartMonthly}
+            selectedMonth={selectedMonth}
+            onMonthSelect={handleMonthSelect}
             bars={[
               { key: 'importe', label: 'Importe', color: '#1a5c35' },
               { key: 'litros', label: 'Litros', color: '#2d8c52' },
@@ -142,24 +186,28 @@ export default function Liquidaciones() {
         </form>
 
         <div className="table-wrap">
-          {registros.length === 0 ? (
-            <div className="empty-state">No hay liquidaciones para el período seleccionado.</div>
+          {tablaRegistros.length === 0 ? (
+            <div className="empty-state">
+              {selectedMonth
+                ? 'No hay liquidaciones para el mes seleccionado.'
+                : 'No hay liquidaciones para el período seleccionado.'}
+            </div>
           ) : (
             <table>
               <thead>
                 <tr>
                   <th>Fecha</th>
                   <th>Referencia</th>
-                  <th>Litros</th>
-                  <th>Total</th>
-                  <th>IMEBA</th>
-                  <th>INIA</th>
-                  <th>Aftosa (USD)</th>
-                  <th>Enferm. (USD)</th>
+                  <th className="num">Litros</th>
+                  <th className="num">Total</th>
+                  <th className="num">IMEBA</th>
+                  <th className="num">INIA</th>
+                  <th className="num">Aftosa (USD)</th>
+                  <th className="num">Enferm. (USD)</th>
                 </tr>
               </thead>
               <tbody>
-                {registros.map((r, i) => (
+                {tablaRegistros.map((r, i) => (
                   <tr key={`${r.num_at_card}-${r.doc_date}-${i}`}>
                     <td>{fmtDate(r.doc_date)}</td>
                     <td>{r.num_at_card}</td>

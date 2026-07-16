@@ -2,6 +2,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Legend,
   ResponsiveContainer,
   Tooltip,
@@ -11,9 +12,16 @@ import {
 import { CHART_COLORS } from '../chartUtils';
 import { fmt } from '../utils';
 
+function isSameMonth(a, b) {
+  if (!a || !b) return false;
+  return String(a).slice(0, 7) === String(b).slice(0, 7);
+}
+
 export default function MonthlyBarChart({
   data,
   bars,
+  selectedMonth,
+  onMonthSelect,
   emptyMessage = 'Sin datos para el período',
 }) {
   if (!data || data.length === 0) {
@@ -27,9 +35,21 @@ export default function MonthlyBarChart({
 
   const series = bars || defaultBars;
 
+  function handleClick(state) {
+    const payload = state?.activePayload?.[0]?.payload;
+    if (payload?.month && onMonthSelect) {
+      onMonthSelect(String(payload.month).slice(0, 7));
+    }
+  }
+
   return (
     <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <BarChart
+        data={data}
+        margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+        onClick={handleClick}
+        style={{ cursor: onMonthSelect ? 'pointer' : undefined }}
+      >
         <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} vertical={false} />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#5a6d62' }} />
         <YAxis tick={{ fontSize: 11, fill: '#5a6d62' }} width={56} />
@@ -44,8 +64,15 @@ export default function MonthlyBarChart({
           formatter={(value) => series.find((b) => b.key === value)?.label || value}
           wrapperStyle={{ fontSize: 12 }}
         />
-        {series.map(({ key, label, color }) => (
-          <Bar key={key} dataKey={key} name={key} fill={color} radius={[4, 4, 0, 0]} maxBarSize={32} />
+        {series.map(({ key, color }) => (
+          <Bar key={key} dataKey={key} name={key} radius={[4, 4, 0, 0]} maxBarSize={32}>
+            {data.map((entry) => (
+              <Cell
+                key={`${key}-${entry.month}`}
+                fill={isSameMonth(selectedMonth, entry.month) ? CHART_COLORS.gold : color}
+              />
+            ))}
+          </Bar>
         ))}
       </BarChart>
     </ResponsiveContainer>

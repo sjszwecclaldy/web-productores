@@ -203,9 +203,9 @@ export default function Remisiones() {
                 <tr>
                   <th>Fecha</th>
                   <th>Remito</th>
-                  <th>Litros</th>
-                  <th>Precio</th>
-                  <th>Total</th>
+                  <th className="num">Litros</th>
+                  <th className="num">Precio</th>
+                  <th className="num">Total</th>
                 </tr>
               </thead>
               <tbody>

@@ -90,15 +90,17 @@ export default function Resumen() {
     [remisiones, selectedDate]
   );
 
-  const selectedCalidadRows = useMemo(
-    () => rowsOnDate(calidad, 'collection_date', selectedDate),
-    [calidad, selectedDate]
-  );
-
   const selectedCalidadPoint = useMemo(
     () => calidadChart.find((row) => String(row.date).slice(0, 10) === selectedDate) || null,
     [calidadChart, selectedDate]
   );
+
+  const gaugeCal = useMemo(() => {
+    if (selectedDate) {
+      return selectedCalidadPoint;
+    }
+    return calidad[0] || null;
+  }, [selectedDate, selectedCalidadPoint, calidad]);
 
   const ultimoRem = selectedDate
     ? selectedRemisiones[0] || null
@@ -108,9 +110,7 @@ export default function Resumen() {
     ? selectedRemisiones.reduce((sum, row) => sum + (Number(row.quantity) || 0), 0)
     : null;
 
-  const ultimoCal = selectedDate
-    ? selectedCalidadPoint
-    : calidad[0] || null;
+  const ultimoCal = gaugeCal;
 
   const ultimasEntregas = selectedDate
     ? selectedRemisiones
@@ -210,12 +210,12 @@ export default function Resumen() {
             }
           >
             <div className="gauges-row">
-              <QualityGauge label="Grasa" value={ultimoCal?.fat} max={6} />
-              <QualityGauge label="Proteina" value={ultimoCal?.protein} max={5} />
-              <QualityGauge label="Lactosa" value={ultimoCal?.lactose} max={6} />
-              <QualityGauge label="Solidos totales" value={ultimoCal?.ts} max={14} />
+              <QualityGauge label="Grasa" value={gaugeCal?.fat} max={6} />
+              <QualityGauge label="Proteina" value={gaugeCal?.protein} max={5} />
+              <QualityGauge label="Lactosa" value={gaugeCal?.lactose} max={6} />
+              <QualityGauge label="Solidos totales" value={gaugeCal?.ts} max={14} />
             </div>
-            {selectedDate && selectedCalidadRows.length === 0 && (
+            {selectedDate && !gaugeCal && (
               <p className="chart-empty">Sin muestras de composicion para este dia.</p>
             )}
           </ChartPanel>
@@ -233,8 +233,8 @@ export default function Resumen() {
                   <tr>
                     <th>Fecha</th>
                     <th>Remito</th>
-                    <th>Litros</th>
-                    <th>Total</th>
+                    <th className="num">Litros</th>
+                    <th className="num">Total</th>
                   </tr>
                 </thead>
                 <tbody>

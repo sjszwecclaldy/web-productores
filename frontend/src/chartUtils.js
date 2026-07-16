@@ -113,9 +113,17 @@ export function calcDeltaForDate(grouped, date, valueKey = 'total') {
   return Math.round(((curr - prev) / prev) * 1000) / 10;
 }
 
+export function rowsOnMonth(rows, dateKey, month) {
+  if (!month) return [];
+  const m = String(month).slice(0, 7);
+  return rows.filter((row) => String(row[dateKey] || '').slice(0, 7) === m);
+}
+
 export function toggleSelectedDate(current, next) {
   return current === next ? null : next;
 }
+
+export const toggleSelectedMonth = toggleSelectedDate;
 
 export function avgCalidadByDate(rows) {
   const map = new Map();
