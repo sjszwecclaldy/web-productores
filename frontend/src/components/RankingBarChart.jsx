@@ -47,9 +47,14 @@ export default function RankingBarChart({
     return <p className="chart-empty">{emptyMessage}</p>;
   }
 
+  // El backend devuelve los valores numéricos como texto (Postgres numeric).
+  // Se convierten a Number para que Recharts escale bien el eje (si no, compara
+  // como strings y el máximo del eje queda mal, cortando las barras grandes).
+  const chartData = data.map((d) => ({ ...d, [dataKey]: Number(d[dataKey]) }));
+
   return (
-    <ResponsiveContainer width="100%" height={Math.max(240, data.length * 38)}>
-      <BarChart data={data} layout="vertical" margin={{ top: 8, right: 40, left: 8, bottom: 0 }}>
+    <ResponsiveContainer width="100%" height={Math.max(240, chartData.length * 38)}>
+      <BarChart data={chartData} layout="vertical" margin={{ top: 8, right: 40, left: 8, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} horizontal={false} />
         <XAxis
           type="number"
@@ -69,7 +74,7 @@ export default function RankingBarChart({
           contentStyle={{ borderRadius: 8, border: '1px solid #ccddd4' }}
         />
         <Bar dataKey={dataKey} radius={[0, 4, 4, 0]} maxBarSize={24}>
-          {data.map((e) => (
+          {chartData.map((e) => (
             <Cell key={e.card_code} fill={color} />
           ))}
         </Bar>
