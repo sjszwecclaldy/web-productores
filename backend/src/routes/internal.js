@@ -599,4 +599,63 @@ router.post('/liberar-cuenta', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Verificacion y recarga controlada de dominios
+// ---------------------------------------------------------------------------
+
+// Dominio -> tabla + columna de fecha para conteo/rango.
+const DOMAIN_TABLES = {
+  remisiones: { table: 'remisiones', dateCol: 'doc_date' },
+  calidad_composicion: { table: 'calidad_composicion', dateCol: 'collection_date' },
+  liquidaciones: { table: 'liquidaciones', dateCol: 'doc_date' },
+  reliquidaciones: { table: 'reliquidaciones', dateCol: 'doc_date' },
+  calidad_sanitaria: { table: 'calidad_sanitaria', dateCol: 'lab_date' },
+};
+
+// GET /internal/counts -> cuantos registros hay por dominio y su rango de fechas.
+// Sirve para corroborar contra los conteos que se ven en SAP.
+router.get('/counts', async (_req, res) => {
+  const counts = {};
+  for (const [domain, cfg] of Object.entries(DOMAIN_TABLES)) {
+    try {
+      const { rows } = await query(
+        `SELECT COUNT(*)::int AS total,
+                to_char(MIN(${cfg.dateCol}), 'YYYY-MM-DD') AS min_date,
+                to_char(MAX(${cfg.dateCol}), 'YYYY-MM-DD') AS max_date
+         FROM ${cfg.table}`
+      );
+      counts[domain] = rows[0];
+    } catch (err) {
+      // Tabla inexistente todavia (ej. calidad_sanitaria antes de aplicar su prompt).
+      counts[domain] = { total: null, min_date: null, max_date: null, error: err.message };
+    }
+  }
+  res.json({ counts });
+});
+
+// POST /internal/reset-domain  { "domain": "remisiones" }
+// Vacia la tabla del dominio (TRUNCATE) para forzar una recarga historica completa
+// en la siguiente corrida del agente (sync-status devolvera null -> baja desde 2000-01-01).
+// Nunca toca la tabla productores.
+router.post('/reset-domain', async (req, res) => {
+  const domain = String(req.body?.domain || '').trim();
+  const cfg = DOMAIN_TABLES[domain];
+
+  if (!cfg) {
+    return res.status(400).json({
+      error: 'Dominio invalido',
+      allowed: Object.keys(DOMAIN_TABLES),
+    });
+  }
+
+  try {
+    const before = await query(`SELECT COUNT(*)::int AS n FROM ${cfg.table}`);
+    await query(`TRUNCATE TABLE ${cfg.table}`);
+    res.json({ ok: true, domain, table: cfg.table, deleted: before.rows[0].n });
+  } catch (err) {
+    console.error('reset-domain error:', err);
+    res.status(500).json({ error: 'Error interno', detail: err.message });
+  }
+});
+
 module.exports = router;
