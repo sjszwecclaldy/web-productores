@@ -5,6 +5,7 @@ import {
   filterLastDays,
   getCurrentMonthRange,
   groupSumByDate,
+  litrosByYearMonth,
   rowsOnDate,
   sumRemisionesMonth,
   toggleSelectedDate,
@@ -13,6 +14,7 @@ import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fm
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
 import LitrosBarChart from '../components/LitrosBarChart';
+import YearCompareLineChart from '../components/YearCompareLineChart';
 import LoadingScreen from '../components/LoadingScreen';
 import SelectedDateBanner from '../components/SelectedDateBanner';
 
@@ -29,7 +31,7 @@ export default function Remisiones() {
   const monthLabel = getCurrentMonthRange().label;
 
   async function loadChartRegistros() {
-    const data = await api(`/api/remisiones?from=${apiFromDate(90)}`);
+    const data = await api(`/api/remisiones?from=${DATA_FROM_DATE}`);
     setChartRegistros(filterFromMinDate(data.data, 'doc_date'));
   }
 
@@ -76,6 +78,11 @@ export default function Remisiones() {
   const chartLitros = useMemo(
     () => filterLastDays(groupSumByDate(chartRegistros, 'doc_date', 'quantity'), chartDays),
     [chartRegistros, chartDays]
+  );
+
+  const yearCompare = useMemo(
+    () => litrosByYearMonth(chartRegistros, 'doc_date', 'quantity'),
+    [chartRegistros]
   );
 
   const selectedRemisiones = useMemo(
@@ -126,8 +133,6 @@ export default function Remisiones() {
                   {ultimo.doc_num != null && ` · Remito ${ultimo.doc_num}`}
                 </p>
                 <div className="stat-row"><span>Litros</span><span className="value">{fmt(ultimo.quantity)}</span></div>
-                <div className="stat-row"><span>Precio</span><span className="value">{fmt(ultimo.price)}</span></div>
-                <div className="stat-row"><span>Total</span><span className="value">{fmt(ultimo.line_total)}</span></div>
               </>
             ) : (
               <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
@@ -143,7 +148,6 @@ export default function Remisiones() {
             {totales && totales.entregas > 0 ? (
               <>
                 <div className="stat-row"><span>Litros entregados</span><span className="value">{fmt(totales.total_litros)}</span></div>
-                <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totales.total_importe)}</span></div>
                 <div className="stat-row"><span>Entregas</span><span className="value">{totales.entregas}</span></div>
               </>
             ) : (
@@ -176,6 +180,10 @@ export default function Remisiones() {
           />
         </ChartPanel>
 
+        <ChartPanel title="Litros por mes — comparacion de anos">
+          <YearCompareLineChart data={yearCompare.data} years={yearCompare.years} />
+        </ChartPanel>
+
         <form className="filters" onSubmit={handleFilter}>
           <div className="form-group">
             <label htmlFor="from">Desde</label>
@@ -204,8 +212,6 @@ export default function Remisiones() {
                   <th>Fecha</th>
                   <th>Remito</th>
                   <th className="num">Litros</th>
-                  <th className="num">Precio</th>
-                  <th className="num">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -214,8 +220,6 @@ export default function Remisiones() {
                     <td>{fmtDate(r.doc_date)}</td>
                     <td>{r.doc_num}</td>
                     <td className="num">{fmt(r.quantity)}</td>
-                    <td className="num">{fmt(r.price)}</td>
-                    <td className="num">{fmt(r.line_total)}</td>
                   </tr>
                 ))}
               </tbody>

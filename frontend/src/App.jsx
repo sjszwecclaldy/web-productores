@@ -8,6 +8,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Resumen from './pages/Resumen';
 import Composicion from './pages/Composicion';
+import Calidad from './pages/Calidad';
 import Remisiones from './pages/Remisiones';
 import Liquidaciones from './pages/Liquidaciones';
 import Reliquidaciones from './pages/Reliquidaciones';
@@ -73,6 +74,16 @@ export default function App() {
         }
       />
       <Route path="/calidad" element={<Navigate to="/composicion" replace />} />
+      <Route
+        path="/calidad-sanitaria"
+        element={
+          <PrivateRoute>
+            <AdminProducerGate>
+              <Calidad />
+            </AdminProducerGate>
+          </PrivateRoute>
+        }
+      />
       <Route
         path="/remisiones"
         element={

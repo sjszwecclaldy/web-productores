@@ -1,0 +1,67 @@
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import { CHART_COLORS } from '../chartUtils';
+import { fmt } from '../utils';
+
+// Línea de litros por día (serie única). Pensada para muchos puntos (año corriente):
+// sin puntos visibles para no recargar, con selección de día al hacer clic.
+export default function LitrosLineChart({
+  data,
+  selectedDate,
+  onDateSelect,
+  emptyMessage = 'Sin datos para el período',
+}) {
+  if (!data || data.length === 0) {
+    return <p className="chart-empty">{emptyMessage}</p>;
+  }
+
+  const chartData = data.map((d) => ({ ...d, total: Number(d.total) }));
+
+  function handleClick(state) {
+    const payload = state?.activePayload?.[0]?.payload;
+    if (payload?.date && onDateSelect) {
+      onDateSelect(String(payload.date).slice(0, 10));
+    }
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={280}>
+      <LineChart
+        data={chartData}
+        margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+        onClick={handleClick}
+        style={{ cursor: onDateSelect ? 'pointer' : undefined }}
+      >
+        <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} vertical={false} />
+        <XAxis
+          dataKey="label"
+          tick={{ fontSize: 11, fill: '#5a6d62' }}
+          interval="preserveStartEnd"
+          minTickGap={40}
+        />
+        <YAxis tick={{ fontSize: 11, fill: '#5a6d62' }} width={52} />
+        <Tooltip
+          formatter={(v) => [`${fmt(v)} L`, 'Litros']}
+          labelFormatter={(l) => l}
+          contentStyle={{ borderRadius: 8, border: '1px solid #ccddd4' }}
+        />
+        <Line
+          type="monotone"
+          dataKey="total"
+          stroke={CHART_COLORS.primary}
+          strokeWidth={2}
+          dot={false}
+          activeDot={{ r: 5 }}
+          connectNulls
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}

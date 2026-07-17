@@ -11,6 +11,7 @@ import {
 import {
   IconCalidad,
   IconComparativa,
+  IconSanidad,
   IconLiquidaciones,
   IconReliquidaciones,
   IconRemisiones,
@@ -20,6 +21,7 @@ import {
 const NAV_ITEMS = [
   { to: '/', end: true, label: 'Resumen', Icon: IconResumen },
   { to: '/composicion', label: 'Composición', Icon: IconCalidad },
+  { to: '/calidad-sanitaria', label: 'Calidad', Icon: IconSanidad },
   { to: '/remisiones', label: 'Remisiones', Icon: IconRemisiones },
   { to: '/liquidaciones', label: 'Liquidaciones', Icon: IconLiquidaciones },
   { to: '/reliquidaciones', label: 'Reliquidaciones', Icon: IconReliquidaciones },

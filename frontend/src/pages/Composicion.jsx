@@ -149,10 +149,6 @@ export default function Composicion() {
 
         <div className="cards-grid">
           <ResumenCard
-            title={selectedDate ? `Analisis del ${fmtDate(selectedDate)}` : 'Ultimo analisis'}
-            data={ultimo}
-          />
-          <ResumenCard
             title={`Promedio mes corriente (${monthLabel})`}
             data={
               promedioMes

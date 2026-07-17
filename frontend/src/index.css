@@ -944,3 +944,14 @@ th.sortable.sorted {
   color: var(--muted);
   font-size: 0.82rem;
 }
+
+/* Aviso informativo (secciones en preparación) */
+.info-msg {
+  background: var(--bg-tint, #e6f2eb);
+  color: var(--primary);
+  border: 1px solid var(--border);
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.92rem;
+  margin-bottom: 1.25rem;
+}

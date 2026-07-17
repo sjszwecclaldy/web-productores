@@ -140,34 +140,23 @@ export default function Liquidaciones() {
               <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
             )}
           </div>
-
-          <div className="stat-card">
-            <h3>
-              {selectedMonth
-                ? `Totales ${formatMonthLabel(selectedMonth)}`
-                : `Totales mes corriente (${monthLabel})`}
-            </h3>
-            {totalesMes.liquidaciones > 0 ? (
-              <>
-                <div className="stat-row"><span>Litros liquidados</span><span className="value">{fmt(totalesMes.total_litros)}</span></div>
-                <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totalesMes.total_importe)}</span></div>
-                <div className="stat-row"><span>Liquidaciones</span><span className="value">{totalesMes.liquidaciones}</span></div>
-              </>
-            ) : (
-              <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
-            )}
-          </div>
         </div>
 
-        <ChartPanel title="Importe y litros por mes (ultimo ano)">
+        <ChartPanel title="Importe por mes (ultimo ano)">
           <MonthlyBarChart
             data={chartMonthly}
             selectedMonth={selectedMonth}
             onMonthSelect={handleMonthSelect}
-            bars={[
-              { key: 'importe', label: 'Importe', color: '#1a5c35' },
-              { key: 'litros', label: 'Litros', color: '#2d8c52' },
-            ]}
+            bars={[{ key: 'importe', label: 'Importe', color: '#1a5c35' }]}
+          />
+        </ChartPanel>
+
+        <ChartPanel title="Litros por mes (ultimo ano)">
+          <MonthlyBarChart
+            data={chartMonthly}
+            selectedMonth={selectedMonth}
+            onMonthSelect={handleMonthSelect}
+            bars={[{ key: 'litros', label: 'Litros', color: '#2d8c52' }]}
           />
         </ChartPanel>
 

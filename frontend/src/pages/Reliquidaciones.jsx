@@ -138,22 +138,6 @@ export default function Reliquidaciones() {
               <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
             )}
           </div>
-
-          <div className="stat-card">
-            <h3>
-              {selectedMonth
-                ? `Totales ${formatMonthLabel(selectedMonth)}`
-                : `Totales mes corriente (${monthLabel})`}
-            </h3>
-            {totalesMes.reliquidaciones > 0 ? (
-              <>
-                <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totalesMes.total_importe)}</span></div>
-                <div className="stat-row"><span>Reliquidaciones</span><span className="value">{totalesMes.reliquidaciones}</span></div>
-              </>
-            ) : (
-              <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
-            )}
-          </div>
         </div>
 
         <ChartPanel title="Ajustes por mes (ultimo ano)">

@@ -12,27 +12,20 @@ import {
   rowsOnDate,
   toggleSelectedDate,
 } from '../chartUtils';
-import { apiFromDate, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { apiFromDate, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
 import KpiCard from '../components/KpiCard';
-import LitrosBarChart from '../components/LitrosBarChart';
+import LitrosLineChart from '../components/LitrosLineChart';
 import LoadingScreen from '../components/LoadingScreen';
 import QualityGauge from '../components/QualityGauge';
 import SelectedDateBanner from '../components/SelectedDateBanner';
-
-const PERIOD_OPTIONS = [
-  { days: 14, label: '14 dias' },
-  { days: 30, label: '30 dias' },
-  { days: 90, label: '90 dias' },
-];
 
 export default function Resumen() {
   const navigate = useNavigate();
   const [remisiones, setRemisiones] = useState([]);
   const [calidad, setCalidad] = useState([]);
-  const [chartDays, setChartDays] = useState(30);
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -41,10 +34,11 @@ export default function Resumen() {
   useEffect(() => {
     async function init() {
       try {
-        const from = apiFromDate(90);
+        const yearStart = `${new Date().getFullYear()}-01-01`;
+        const remFrom = yearStart < DATA_FROM_DATE ? DATA_FROM_DATE : yearStart;
         const [remData, calData] = await Promise.all([
-          api(`/api/remisiones?from=${from}`),
-          api(`/api/calidad-composicion?from=${from}`),
+          api(`/api/remisiones?from=${remFrom}`),
+          api(`/api/calidad-composicion?from=${apiFromDate(90)}`),
         ]);
         setRemisiones(filterFromMinDate(remData.data, 'doc_date'));
         setCalidad(filterFromMinDate(calData.data, 'collection_date'));
@@ -65,11 +59,6 @@ export default function Resumen() {
   const litrosByDay = useMemo(
     () => groupSumByDate(remisiones, 'doc_date', 'quantity'),
     [remisiones]
-  );
-
-  const chartLitros = useMemo(
-    () => filterLastDays(litrosByDay, chartDays),
-    [litrosByDay, chartDays]
   );
 
   const calidadChart = useMemo(() => avgCalidadByDate(calidad), [calidad]);
@@ -168,25 +157,9 @@ export default function Resumen() {
         </div>
 
         <div className="charts-grid">
-          <ChartPanel
-            title="Litros entregados por dia"
-            actions={
-              <div className="period-toggle">
-                {PERIOD_OPTIONS.map(({ days, label }) => (
-                  <button
-                    key={days}
-                    type="button"
-                    className={`period-toggle__btn${chartDays === days ? ' active' : ''}`}
-                    onClick={() => setChartDays(days)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            }
-          >
-            <LitrosBarChart
-              data={chartLitros}
+          <ChartPanel title="Litros entregados por dia (ano corriente)">
+            <LitrosLineChart
+              data={litrosByDay}
               selectedDate={selectedDate}
               onDateSelect={handleDateSelect}
             />
@@ -234,7 +207,6 @@ export default function Resumen() {
                     <th>Fecha</th>
                     <th>Remito</th>
                     <th className="num">Litros</th>
-                    <th className="num">Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -243,7 +215,6 @@ export default function Resumen() {
                       <td>{fmtDate(r.doc_date)}</td>
                       <td>{r.doc_num}</td>
                       <td className="num">{fmt(r.quantity)}</td>
-                      <td className="num">{fmt(r.line_total)}</td>
                     </tr>
                   ))}
                 </tbody>

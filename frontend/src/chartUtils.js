@@ -240,3 +240,26 @@ export function avgDailyCurrentMonth(grouped, valueKey = 'total') {
   });
   return avgDaily(monthRows, valueKey);
 }
+
+export function litrosByYearMonth(rows, dateKey, valueKey) {
+  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const yearsSet = new Set();
+  const map = new Map();
+  for (const row of rows) {
+    const ds = String(row[dateKey] || '').slice(0, 10);
+    if (ds.length < 7) continue;
+    const year = ds.slice(0, 4);
+    const monthIdx = parseInt(ds.slice(5, 7), 10) - 1;
+    if (monthIdx < 0 || monthIdx > 11) continue;
+    yearsSet.add(year);
+    if (!map.has(monthIdx)) map.set(monthIdx, { monthIdx, label: months[monthIdx] });
+    const bucket = map.get(monthIdx);
+    bucket[year] = (bucket[year] || 0) + (Number(row[valueKey]) || 0);
+  }
+  const data = [];
+  for (let i = 0; i < 12; i++) {
+    data.push(map.get(i) || { monthIdx: i, label: months[i] });
+  }
+  const years = [...yearsSet].sort();
+  return { years, data };
+}
