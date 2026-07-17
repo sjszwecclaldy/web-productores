@@ -187,7 +187,7 @@ export default function Remisiones() {
           />
         </ChartPanel>
 
-        <ChartPanel title="Litros por mes (último año)">
+        <ChartPanel title="Litros por mes">
           <LitrosLineChart data={litrosPorMes} dots />
         </ChartPanel>
 
