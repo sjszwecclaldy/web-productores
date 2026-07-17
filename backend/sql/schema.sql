@@ -96,6 +96,20 @@ CREATE TABLE IF NOT EXISTS reliquidaciones (
 CREATE INDEX IF NOT EXISTS idx_reliquidaciones_card_date
   ON reliquidaciones (card_code, doc_date DESC);
 
+CREATE TABLE IF NOT EXISTS calidad_sanitaria (
+  id SERIAL PRIMARY KEY,
+  card_code TEXT NOT NULL,
+  lab_date DATE NOT NULL,
+  celulas NUMERIC,
+  bacterias NUMERIC,
+  origen TEXT,
+  synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (card_code, lab_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_calidad_sanitaria_card_date
+  ON calidad_sanitaria (card_code, lab_date DESC);
+
 CREATE TABLE IF NOT EXISTS sync_log (
   id SERIAL PRIMARY KEY,
   started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

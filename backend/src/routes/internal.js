@@ -48,6 +48,9 @@ router.get('/sync-status', async (req, res) => {
     } else if (domain === 'reliquidaciones') {
       const { rows } = await query(`SELECT MAX(doc_date)::text AS last_date FROM reliquidaciones`);
       lastDate = rows[0]?.last_date || null;
+    } else if (domain === 'calidad_sanitaria') {
+      const { rows } = await query(`SELECT MAX(lab_date)::text AS last_date FROM calidad_sanitaria`);
+      lastDate = rows[0]?.last_date || null;
     } else {
       const { rows } = await query(`SELECT MAX(collection_date)::text AS last_date FROM calidad_composicion`);
       lastDate = rows[0]?.last_date || null;
@@ -94,7 +97,7 @@ router.post('/sync-log', async (req, res) => {
     return res.status(400).json({ error: 'status inválido' });
   }
 
-  const allowedDomains = ['calidad_composicion', 'remisiones', 'liquidaciones', 'reliquidaciones'];
+  const allowedDomains = ['calidad_composicion', 'remisiones', 'liquidaciones', 'reliquidaciones', 'calidad_sanitaria'];
   const dom = domain && allowedDomains.includes(domain) ? domain : 'calidad_composicion';
 
   try {
@@ -436,6 +439,73 @@ router.post('/ingest/reliquidaciones', async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('ingest reliquidaciones error:', err);
+    res.status(500).json({ error: 'Error en ingest', detail: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+router.post('/ingest/calidad-sanitaria', async (req, res) => {
+  const records = req.body;
+
+  if (!Array.isArray(records) || records.length === 0) {
+    return res.status(400).json({ error: 'Se espera un array de registros' });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    let inserted = 0;
+    let updated = 0;
+    const seenProducers = new Set();
+
+    for (const rec of records) {
+      const cardCode = String(rec.card_code || rec.CardCode || '').trim();
+      if (!cardCode) continue;
+
+      const cardName = rec.card_name || rec.CardName || null;
+      if (!seenProducers.has(cardCode)) {
+        await ensureProductor(client, cardCode, cardName);
+        seenProducers.add(cardCode);
+      }
+
+      const labDate = rec.lab_date ?? rec.U_LabDate;
+      if (!labDate) continue;
+
+      const result = await client.query(
+        `INSERT INTO calidad_sanitaria (
+           card_code, lab_date, celulas, bacterias, origen, synced_at
+         ) VALUES ($1,$2,$3,$4,$5,NOW())
+         ON CONFLICT (card_code, lab_date)
+         DO UPDATE SET
+           celulas = EXCLUDED.celulas,
+           bacterias = EXCLUDED.bacterias,
+           origen = EXCLUDED.origen,
+           synced_at = NOW()
+         RETURNING (xmax = 0) AS is_insert`,
+        [
+          cardCode,
+          labDate,
+          rec.celulas ?? rec.Celulas ?? null,
+          rec.bacterias ?? rec.Bacterias ?? null,
+          rec.origen ?? rec.Origen ?? null,
+        ]
+      );
+
+      if (result.rows[0]?.is_insert) {
+        inserted++;
+      } else {
+        updated++;
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ inserted, updated });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('ingest calidad-sanitaria error:', err);
     res.status(500).json({ error: 'Error en ingest', detail: err.message });
   } finally {
     client.release();

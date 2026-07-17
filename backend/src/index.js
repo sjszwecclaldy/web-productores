@@ -9,6 +9,7 @@ const calidadRoutes = require('./routes/calidad');
 const remisionesRoutes = require('./routes/remisiones');
 const liquidacionesRoutes = require('./routes/liquidaciones');
 const reliquidacionesRoutes = require('./routes/reliquidaciones');
+const calidadSanitariaRoutes = require('./routes/calidad-sanitaria');
 const adminRoutes = require('./routes/admin');
 const internalRoutes = require('./routes/internal');
 
@@ -40,6 +41,7 @@ app.use('/api/calidad-composicion', calidadRoutes);
 app.use('/api/remisiones', remisionesRoutes);
 app.use('/api/liquidaciones', liquidacionesRoutes);
 app.use('/api/reliquidaciones', reliquidacionesRoutes);
+app.use('/api/calidad-sanitaria', calidadSanitariaRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/internal', internalRoutes);
 

@@ -123,6 +123,27 @@ $Domains = @(
                 line_total  = $Row.LineTotal
             }
         }
+    },
+    @{
+        Name        = 'CALIDAD'
+        DomainKey   = 'calidad_sanitaria'
+        SapService  = 'CALIDAD'
+        DateField   = 'U_LabDate'
+        IngestPath  = '/internal/ingest/calidad-sanitaria'
+        SelectFields = @(
+            'Origen', 'CardCode', 'CardName', 'U_LabDate', 'Celulas', 'Bacterias'
+        )
+        Transform = {
+            param($Row)
+            @{
+                card_code = $Row.CardCode
+                card_name = $Row.CardName
+                lab_date  = $Row.U_LabDate
+                celulas   = $Row.Celulas
+                bacterias = $Row.Bacterias
+                origen    = $Row.Origen
+            }
+        }
     }
 )
 
