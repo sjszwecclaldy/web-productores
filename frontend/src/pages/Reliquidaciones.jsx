@@ -140,7 +140,7 @@ export default function Reliquidaciones() {
           </div>
         </div>
 
-        <ChartPanel title="Ajustes por mes (ultimo ano)">
+        <ChartPanel title="Ajustes por mes (último año)">
           <MonthlyBarChart
             data={chartMonthly}
             selectedMonth={selectedMonth}

@@ -10,12 +10,13 @@ import {
 import { CHART_COLORS } from '../chartUtils';
 import { fmt } from '../utils';
 
-// Línea de litros por día (serie única). Pensada para muchos puntos (año corriente):
-// sin puntos visibles para no recargar, con selección de día al hacer clic.
+// Línea de litros (serie única). Sirve para muchos puntos diarios (dots=false, año corriente)
+// o para pocos puntos mensuales (dots=true). Selección opcional al hacer clic (por día).
 export default function LitrosLineChart({
   data,
   selectedDate,
   onDateSelect,
+  dots = false,
   emptyMessage = 'Sin datos para el período',
 }) {
   if (!data || data.length === 0) {
@@ -44,7 +45,7 @@ export default function LitrosLineChart({
           dataKey="label"
           tick={{ fontSize: 11, fill: '#5a6d62' }}
           interval="preserveStartEnd"
-          minTickGap={40}
+          minTickGap={dots ? 8 : 40}
         />
         <YAxis tick={{ fontSize: 11, fill: '#5a6d62' }} width={52} />
         <Tooltip
@@ -57,7 +58,7 @@ export default function LitrosLineChart({
           dataKey="total"
           stroke={CHART_COLORS.primary}
           strokeWidth={2}
-          dot={false}
+          dot={dots ? { r: 3 } : false}
           activeDot={{ r: 5 }}
           connectNulls
         />

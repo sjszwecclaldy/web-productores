@@ -5,6 +5,7 @@ import {
   filterLastDays,
   getCurrentMonthRange,
   groupSumByDate,
+  groupSumByMonth,
   litrosByYearMonth,
   rowsOnDate,
   sumRemisionesMonth,
@@ -14,6 +15,7 @@ import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fm
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
 import LitrosBarChart from '../components/LitrosBarChart';
+import LitrosLineChart from '../components/LitrosLineChart';
 import YearCompareLineChart from '../components/YearCompareLineChart';
 import LoadingScreen from '../components/LoadingScreen';
 import SelectedDateBanner from '../components/SelectedDateBanner';
@@ -82,6 +84,11 @@ export default function Remisiones() {
 
   const yearCompare = useMemo(
     () => litrosByYearMonth(chartRegistros, 'doc_date', 'quantity'),
+    [chartRegistros]
+  );
+
+  const litrosPorMes = useMemo(
+    () => groupSumByMonth(chartRegistros, 'doc_date', 'quantity').slice(-12),
     [chartRegistros]
   );
 
@@ -180,7 +187,11 @@ export default function Remisiones() {
           />
         </ChartPanel>
 
-        <ChartPanel title="Litros por mes — comparacion de anos">
+        <ChartPanel title="Litros por mes (último año)">
+          <LitrosLineChart data={litrosPorMes} dots />
+        </ChartPanel>
+
+        <ChartPanel title="Litros por mes — comparación de años">
           <YearCompareLineChart data={yearCompare.data} years={yearCompare.years} />
         </ChartPanel>
 

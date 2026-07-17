@@ -142,21 +142,12 @@ export default function Liquidaciones() {
           </div>
         </div>
 
-        <ChartPanel title="Importe por mes (ultimo ano)">
+        <ChartPanel title="Importe por mes (último año)">
           <MonthlyBarChart
             data={chartMonthly}
             selectedMonth={selectedMonth}
             onMonthSelect={handleMonthSelect}
             bars={[{ key: 'importe', label: 'Importe', color: '#1a5c35' }]}
-          />
-        </ChartPanel>
-
-        <ChartPanel title="Litros por mes (ultimo ano)">
-          <MonthlyBarChart
-            data={chartMonthly}
-            selectedMonth={selectedMonth}
-            onMonthSelect={handleMonthSelect}
-            bars={[{ key: 'litros', label: 'Litros', color: '#2d8c52' }]}
           />
         </ChartPanel>
 

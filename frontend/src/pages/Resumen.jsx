@@ -157,7 +157,7 @@ export default function Resumen() {
         </div>
 
         <div className="charts-grid">
-          <ChartPanel title="Litros entregados por dia (ano corriente)">
+          <ChartPanel title="Litros entregados por día (año corriente)">
             <LitrosLineChart
               data={litrosByDay}
               selectedDate={selectedDate}
