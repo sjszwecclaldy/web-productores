@@ -3,18 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import {
   avgCalidadByDate,
-  avgCalidadMonth,
   avgCalidadSnapshot,
-  filterLastDays,
-  getCurrentMonthRange,
   rowsOnDate,
   toggleSelectedDate,
 } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
 import LoadingScreen from '../components/LoadingScreen';
+import PeriodFilter from '../components/PeriodFilter';
 import QualityGauge from '../components/QualityGauge';
 import SelectedDateBanner from '../components/SelectedDateBanner';
 
@@ -60,18 +58,11 @@ function ResumenCard({ title, data }) {
 export default function Composicion() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
-  const [chartRegistros, setChartRegistros] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState(DATA_FROM_DATE);
   const [to, setTo] = useState('');
-  const monthLabel = getCurrentMonthRange().label;
-
-  async function loadChartRegistros() {
-    const data = await api(`/api/calidad-composicion?from=${apiFromDate(90)}`);
-    setChartRegistros(filterFromMinDate(data.data, 'collection_date'));
-  }
 
   async function loadRegistros() {
     const params = new URLSearchParams();
@@ -84,7 +75,7 @@ export default function Composicion() {
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadRegistros(), loadChartRegistros()]);
+        await loadRegistros();
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -113,21 +104,16 @@ export default function Composicion() {
     }
   }
 
-  const calidadChart = useMemo(
-    () => filterLastDays(avgCalidadByDate(chartRegistros), 90),
-    [chartRegistros]
-  );
+  const calidadChart = useMemo(() => avgCalidadByDate(registros), [registros]);
 
   const selectedRows = useMemo(
-    () => rowsOnDate(chartRegistros, 'collection_date', selectedDate),
-    [chartRegistros, selectedDate]
+    () => rowsOnDate(registros, 'collection_date', selectedDate),
+    [registros, selectedDate]
   );
 
-  const ultimo = selectedDate
-    ? avgCalidadSnapshot(selectedRows)
-    : chartRegistros[0] || null;
+  const ultimo = selectedDate ? avgCalidadSnapshot(selectedRows) : registros[0] || null;
 
-  const promedioMes = avgCalidadMonth(chartRegistros);
+  const promedioPeriodo = useMemo(() => avgCalidadSnapshot(registros), [registros]);
 
   function handleDateSelect(date) {
     setSelectedDate((current) => toggleSelectedDate(current, date));
@@ -145,21 +131,19 @@ export default function Composicion() {
         <h2 className="page-title">Composición</h2>
         {error && <div className="error-msg">{error}</div>}
 
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onSubmit={handleFilter} />
+
         <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
 
         <div className="cards-grid">
           <ResumenCard
-            title={`Promedio mes corriente (${monthLabel})`}
-            data={
-              promedioMes
-                ? { ...promedioMes, collection_date: null }
-                : null
-            }
+            title="Promedio del período"
+            data={promedioPeriodo ? { ...promedioPeriodo, collection_date: null } : null}
           />
         </div>
 
         <div className="charts-grid">
-          <ChartPanel title="Evolucion grasa y proteina (90 dias)">
+          <ChartPanel title="Evolución grasa y proteína">
             <CalidadLineChart
               data={calidadChart}
               selectedDate={selectedDate}
@@ -181,26 +165,6 @@ export default function Composicion() {
             </div>
           </ChartPanel>
         </div>
-
-        <form className="filters" onSubmit={handleFilter}>
-          <div className="form-group">
-            <label htmlFor="from">Desde</label>
-            <input
-              id="from"
-              type="date"
-              min={DATA_FROM_DATE}
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="to">Hasta</label>
-            <input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-          <button type="submit" className="btn btn-primary" style={{ width: 'auto' }}>
-            Filtrar
-          </button>
-        </form>
 
         <div className="table-wrap">
           {registros.length === 0 ? (

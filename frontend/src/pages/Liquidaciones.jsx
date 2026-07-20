@@ -3,34 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import {
   formatMonthLabel,
-  getCurrentMonthRange,
   groupDualByMonth,
   rowsOnMonth,
-  sumLiquidacionesMonth,
   toggleSelectedMonth,
 } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
 import LoadingScreen from '../components/LoadingScreen';
 import MonthlyBarChart from '../components/MonthlyBarChart';
+import PeriodFilter from '../components/PeriodFilter';
 import { SelectedMonthBanner } from '../components/SelectedDateBanner';
 
 export default function Liquidaciones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
-  const [chartRegistros, setChartRegistros] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState(DATA_FROM_DATE);
   const [to, setTo] = useState('');
-  const monthLabel = getCurrentMonthRange().label;
-
-  async function loadChartRegistros() {
-    const data = await api(`/api/liquidaciones?from=${apiFromDate(365)}`);
-    setChartRegistros(filterFromMinDate(data.data, 'doc_date'));
-  }
 
   async function loadRegistros() {
     const params = new URLSearchParams();
@@ -43,7 +35,7 @@ export default function Liquidaciones() {
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadRegistros(), loadChartRegistros()]);
+        await loadRegistros();
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -73,28 +65,19 @@ export default function Liquidaciones() {
   }
 
   const chartMonthly = useMemo(
-    () => groupDualByMonth(chartRegistros, 'doc_date', 'total', 'cantidad', 'importe', 'litros'),
-    [chartRegistros]
+    () => groupDualByMonth(registros, 'doc_date', 'total', 'cantidad', 'importe', 'litros'),
+    [registros]
   );
 
   const selectedRows = useMemo(
-    () => rowsOnMonth(chartRegistros, 'doc_date', selectedMonth),
-    [chartRegistros, selectedMonth]
-  );
-
-  const tablaRegistros = useMemo(
-    () => (selectedMonth ? rowsOnMonth(registros, 'doc_date', selectedMonth) : registros),
+    () => rowsOnMonth(registros, 'doc_date', selectedMonth),
     [registros, selectedMonth]
   );
 
-  const totalesMes = useMemo(() => {
-    if (!selectedMonth) return sumLiquidacionesMonth(chartRegistros);
-    return {
-      total_litros: selectedRows.reduce((sum, row) => sum + (Number(row.cantidad) || 0), 0),
-      total_importe: selectedRows.reduce((sum, row) => sum + (Number(row.total) || 0), 0),
-      liquidaciones: selectedRows.length,
-    };
-  }, [selectedMonth, selectedRows, chartRegistros]);
+  const tablaRegistros = useMemo(
+    () => (selectedMonth ? selectedRows : registros),
+    [registros, selectedRows, selectedMonth]
+  );
 
   function handleMonthSelect(month) {
     setSelectedMonth((current) => toggleSelectedMonth(current, month));
@@ -104,7 +87,7 @@ export default function Liquidaciones() {
     return <LoadingScreen />;
   }
 
-  const ultima = selectedMonth ? selectedRows[0] || null : chartRegistros[0] || null;
+  const ultima = selectedMonth ? selectedRows[0] || null : registros[0] || null;
 
   return (
     <div className="layout">
@@ -113,6 +96,8 @@ export default function Liquidaciones() {
       <main className="main">
         <h2 className="page-title">Liquidaciones</h2>
         {error && <div className="error-msg">{error}</div>}
+
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onSubmit={handleFilter} />
 
         <SelectedMonthBanner month={selectedMonth} onClear={() => setSelectedMonth(null)} />
 
@@ -142,7 +127,7 @@ export default function Liquidaciones() {
           </div>
         </div>
 
-        <ChartPanel title="Importe por mes (último año)">
+        <ChartPanel title="Importe por mes">
           <MonthlyBarChart
             data={chartMonthly}
             selectedMonth={selectedMonth}
@@ -150,20 +135,6 @@ export default function Liquidaciones() {
             bars={[{ key: 'importe', label: 'Importe', color: '#1a5c35' }]}
           />
         </ChartPanel>
-
-        <form className="filters" onSubmit={handleFilter}>
-          <div className="form-group">
-            <label htmlFor="from">Desde</label>
-            <input id="from" type="date" min={DATA_FROM_DATE} value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label htmlFor="to">Hasta</label>
-            <input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-          <button type="submit" className="btn btn-primary" style={{ width: 'auto' }}>
-            Filtrar
-          </button>
-        </form>
 
         <div className="table-wrap">
           {tablaRegistros.length === 0 ? (

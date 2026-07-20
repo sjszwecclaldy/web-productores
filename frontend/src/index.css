@@ -419,6 +419,12 @@ a {
   min-width: 180px;
 }
 
+.filters--global {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
 .btn {
   display: inline-block;
   padding: 0.7rem 1.25rem;

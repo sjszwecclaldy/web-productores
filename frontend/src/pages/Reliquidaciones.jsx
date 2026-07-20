@@ -4,34 +4,26 @@ import { api, clearToken } from '../api';
 import {
   CHART_COLORS,
   formatMonthLabel,
-  getCurrentMonthRange,
   groupSumByMonth,
   rowsOnMonth,
-  sumReliquidacionesMonth,
   toggleSelectedMonth,
 } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
 import LoadingScreen from '../components/LoadingScreen';
 import MonthlyBarChart from '../components/MonthlyBarChart';
+import PeriodFilter from '../components/PeriodFilter';
 import { SelectedMonthBanner } from '../components/SelectedDateBanner';
 
 export default function Reliquidaciones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
-  const [chartRegistros, setChartRegistros] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState(DATA_FROM_DATE);
   const [to, setTo] = useState('');
-  const monthLabel = getCurrentMonthRange().label;
-
-  async function loadChartRegistros() {
-    const data = await api(`/api/reliquidaciones?from=${apiFromDate(365)}`);
-    setChartRegistros(filterFromMinDate(data.data, 'doc_date'));
-  }
 
   async function loadRegistros() {
     const params = new URLSearchParams();
@@ -44,7 +36,7 @@ export default function Reliquidaciones() {
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadRegistros(), loadChartRegistros()]);
+        await loadRegistros();
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -74,27 +66,27 @@ export default function Reliquidaciones() {
   }
 
   const chartMonthly = useMemo(() => {
-    const rows = groupSumByMonth(chartRegistros, 'doc_date', 'line_total');
+    const rows = groupSumByMonth(registros, 'doc_date', 'line_total');
     return rows.map((r) => ({ ...r, importe: r.total }));
-  }, [chartRegistros]);
+  }, [registros]);
 
   const selectedRows = useMemo(
-    () => rowsOnMonth(chartRegistros, 'doc_date', selectedMonth),
-    [chartRegistros, selectedMonth]
-  );
-
-  const tablaRegistros = useMemo(
-    () => (selectedMonth ? rowsOnMonth(registros, 'doc_date', selectedMonth) : registros),
+    () => rowsOnMonth(registros, 'doc_date', selectedMonth),
     [registros, selectedMonth]
   );
 
-  const totalesMes = useMemo(() => {
-    if (!selectedMonth) return sumReliquidacionesMonth(chartRegistros);
+  const tablaRegistros = useMemo(
+    () => (selectedMonth ? selectedRows : registros),
+    [registros, selectedRows, selectedMonth]
+  );
+
+  const totales = useMemo(() => {
+    const src = selectedMonth ? selectedRows : registros;
     return {
-      total_importe: selectedRows.reduce((sum, row) => sum + (Number(row.line_total) || 0), 0),
-      reliquidaciones: selectedRows.length,
+      total_importe: src.reduce((sum, row) => sum + (Number(row.line_total) || 0), 0),
+      reliquidaciones: src.length,
     };
-  }, [selectedMonth, selectedRows, chartRegistros]);
+  }, [selectedMonth, selectedRows, registros]);
 
   function handleMonthSelect(month) {
     setSelectedMonth((current) => toggleSelectedMonth(current, month));
@@ -104,7 +96,7 @@ export default function Reliquidaciones() {
     return <LoadingScreen />;
   }
 
-  const ultima = selectedMonth ? selectedRows[0] || null : chartRegistros[0] || null;
+  const ultima = selectedMonth ? selectedRows[0] || null : registros[0] || null;
 
   return (
     <div className="layout">
@@ -113,6 +105,8 @@ export default function Reliquidaciones() {
       <main className="main">
         <h2 className="page-title">Reliquidaciones</h2>
         {error && <div className="error-msg">{error}</div>}
+
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onSubmit={handleFilter} />
 
         <SelectedMonthBanner month={selectedMonth} onClear={() => setSelectedMonth(null)} />
 
@@ -138,9 +132,21 @@ export default function Reliquidaciones() {
               <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
             )}
           </div>
+
+          <div className="stat-card">
+            <h3>{selectedMonth ? `Totales ${formatMonthLabel(selectedMonth)}` : 'Totales del período'}</h3>
+            {totales.reliquidaciones > 0 ? (
+              <>
+                <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totales.total_importe)}</span></div>
+                <div className="stat-row"><span>Reliquidaciones</span><span className="value">{totales.reliquidaciones}</span></div>
+              </>
+            ) : (
+              <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
+            )}
+          </div>
         </div>
 
-        <ChartPanel title="Ajustes por mes (último año)">
+        <ChartPanel title="Ajustes por mes">
           <MonthlyBarChart
             data={chartMonthly}
             selectedMonth={selectedMonth}
@@ -148,20 +154,6 @@ export default function Reliquidaciones() {
             bars={[{ key: 'importe', label: 'Importe', color: CHART_COLORS.gold }]}
           />
         </ChartPanel>
-
-        <form className="filters" onSubmit={handleFilter}>
-          <div className="form-group">
-            <label htmlFor="from">Desde</label>
-            <input id="from" type="date" min={DATA_FROM_DATE} value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label htmlFor="to">Hasta</label>
-            <input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-          <button type="submit" className="btn btn-primary" style={{ width: 'auto' }}>
-            Filtrar
-          </button>
-        </form>
 
         <div className="table-wrap">
           {tablaRegistros.length === 0 ? (

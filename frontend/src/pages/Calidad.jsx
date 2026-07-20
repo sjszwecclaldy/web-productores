@@ -1,28 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { CHART_COLORS, filterLastDays, formatChartDate } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { CHART_COLORS, formatChartDate } from '../chartUtils';
+import { buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
 import KpiCard from '../components/KpiCard';
 import LoadingScreen from '../components/LoadingScreen';
+import PeriodFilter from '../components/PeriodFilter';
 import QualityGauge from '../components/QualityGauge';
 
 export default function Calidad() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
-  const [chartRegistros, setChartRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState(DATA_FROM_DATE);
   const [to, setTo] = useState('');
-
-  async function loadChart() {
-    const data = await api(`/api/calidad-sanitaria?from=${apiFromDate(180)}`);
-    setChartRegistros(filterFromMinDate(data.data, 'lab_date'));
-  }
 
   async function loadRegistros() {
     const params = new URLSearchParams();
@@ -35,7 +30,7 @@ export default function Calidad() {
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadRegistros(), loadChart()]);
+        await loadRegistros();
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -65,21 +60,18 @@ export default function Calidad() {
 
   const serie = useMemo(
     () =>
-      filterLastDays(
-        [...chartRegistros]
-          .map((r) => ({
-            date: r.lab_date,
-            label: formatChartDate(r.lab_date),
-            celulas: r.celulas != null ? Number(r.celulas) : null,
-            bacterias: r.bacterias != null ? Number(r.bacterias) : null,
-          }))
-          .sort((a, b) => a.date.localeCompare(b.date)),
-        180
-      ),
-    [chartRegistros]
+      [...registros]
+        .map((r) => ({
+          date: r.lab_date,
+          label: formatChartDate(r.lab_date),
+          celulas: r.celulas != null ? Number(r.celulas) : null,
+          bacterias: r.bacterias != null ? Number(r.bacterias) : null,
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    [registros]
   );
 
-  const ultima = chartRegistros[0] || null;
+  const ultima = registros[0] || null;
 
   const promedios = useMemo(() => {
     const avg = (arr) => (arr.length ? arr.reduce((sum, v) => sum + v, 0) / arr.length : null);
@@ -88,7 +80,7 @@ export default function Calidad() {
     return { celulas: avg(cel), bacterias: avg(bac) };
   }, [registros]);
 
-  if (loading && chartRegistros.length === 0) {
+  if (loading) {
     return <LoadingScreen />;
   }
 
@@ -99,6 +91,8 @@ export default function Calidad() {
       <main className="main">
         <h2 className="page-title">Calidad</h2>
         {error && <div className="error-msg">{error}</div>}
+
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onSubmit={handleFilter} />
 
         <div className="kpi-grid">
           <KpiCard
@@ -137,20 +131,6 @@ export default function Calidad() {
             />
           </ChartPanel>
         </div>
-
-        <form className="filters" onSubmit={handleFilter}>
-          <div className="form-group">
-            <label htmlFor="from">Desde</label>
-            <input id="from" type="date" min={DATA_FROM_DATE} value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label htmlFor="to">Hasta</label>
-            <input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-          <button type="submit" className="btn btn-primary" style={{ width: 'auto' }}>
-            Filtrar
-          </button>
-        </form>
 
         <div className="table-wrap">
           {registros.length === 0 ? (

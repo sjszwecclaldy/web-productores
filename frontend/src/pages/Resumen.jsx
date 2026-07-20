@@ -3,24 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import {
   avgCalidadByDate,
-  avgDailyCurrentMonth,
   calcDayOverDayDelta,
   calcDeltaForDate,
-  filterLastDays,
-  getCurrentMonthRange,
   groupSumByDate,
   rowsOnDate,
   toggleSelectedDate,
 } from '../chartUtils';
-import { apiFromDate, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
 import KpiCard from '../components/KpiCard';
 import LitrosLineChart from '../components/LitrosLineChart';
 import LoadingScreen from '../components/LoadingScreen';
+import PeriodFilter from '../components/PeriodFilter';
 import QualityGauge from '../components/QualityGauge';
 import SelectedDateBanner from '../components/SelectedDateBanner';
+
+function defaultFrom() {
+  const yearStart = `${new Date().getFullYear()}-01-01`;
+  return yearStart < DATA_FROM_DATE ? DATA_FROM_DATE : yearStart;
+}
 
 export default function Resumen() {
   const navigate = useNavigate();
@@ -30,21 +33,28 @@ export default function Resumen() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const monthLabel = getCurrentMonthRange().label;
+  const [from, setFrom] = useState(defaultFrom);
+  const [to, setTo] = useState('');
+
+  async function loadAll() {
+    const params = new URLSearchParams();
+    params.set('from', buildQueryFrom(from));
+    if (to) params.set('to', to);
+    const qs = params.toString();
+    const [remData, calData, sanData] = await Promise.all([
+      api(`/api/remisiones?${qs}`),
+      api(`/api/calidad-composicion?${qs}`),
+      api(`/api/calidad-sanitaria?${qs}`),
+    ]);
+    setRemisiones(filterFromMinDate(remData.data, 'doc_date'));
+    setCalidad(filterFromMinDate(calData.data, 'collection_date'));
+    setCalidadSan(filterFromMinDate(sanData.data, 'lab_date'));
+  }
 
   useEffect(() => {
     async function init() {
       try {
-        const yearStart = `${new Date().getFullYear()}-01-01`;
-        const remFrom = yearStart < DATA_FROM_DATE ? DATA_FROM_DATE : yearStart;
-        const [remData, calData, sanData] = await Promise.all([
-          api(`/api/remisiones?from=${remFrom}`),
-          api(`/api/calidad-composicion?from=${apiFromDate(90)}`),
-          api(`/api/calidad-sanitaria?from=${apiFromDate(180)}`),
-        ]);
-        setRemisiones(filterFromMinDate(remData.data, 'doc_date'));
-        setCalidad(filterFromMinDate(calData.data, 'collection_date'));
-        setCalidadSan(filterFromMinDate(sanData.data, 'lab_date'));
+        await loadAll();
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -59,23 +69,37 @@ export default function Resumen() {
     init();
   }, [navigate]);
 
+  async function handleFilter(e) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSelectedDate(null);
+    try {
+      await loadAll();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const litrosByDay = useMemo(
     () => groupSumByDate(remisiones, 'doc_date', 'quantity'),
     [remisiones]
   );
 
   const calidadChart = useMemo(() => avgCalidadByDate(calidad), [calidad]);
-  const calidadChartVisible = useMemo(
-    () => filterLastDays(calidadChart, 90),
-    [calidadChart]
-  );
 
   const litrosDelta = useMemo(() => {
     if (selectedDate) return calcDeltaForDate(litrosByDay, selectedDate);
     return calcDayOverDayDelta(litrosByDay);
   }, [litrosByDay, selectedDate]);
 
-  const promedioDiario = useMemo(() => avgDailyCurrentMonth(litrosByDay), [litrosByDay]);
+  const promedioDiario = useMemo(() => {
+    if (!litrosByDay.length) return null;
+    const total = litrosByDay.reduce((sum, d) => sum + (Number(d.total) || 0), 0);
+    return total / litrosByDay.length;
+  }, [litrosByDay]);
 
   const promedioSanitaria = useMemo(() => {
     const avg = (arr) => (arr.length ? arr.reduce((sum, v) => sum + v, 0) / arr.length : null);
@@ -131,6 +155,8 @@ export default function Resumen() {
         <h2 className="page-title">Resumen</h2>
         {error && <div className="error-msg">{error}</div>}
 
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onSubmit={handleFilter} />
+
         <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
 
         <div className="kpi-grid">
@@ -151,7 +177,7 @@ export default function Resumen() {
           />
           <KpiCard
             icon="📊"
-            label={`Promedio diario (${monthLabel})`}
+            label="Promedio diario del período"
             value={promedioDiario != null ? `${fmt(promedioDiario)} L` : '—'}
           />
           <KpiCard
@@ -177,7 +203,7 @@ export default function Resumen() {
         </div>
 
         <div className="charts-grid">
-          <ChartPanel title="Litros entregados por día (año corriente)">
+          <ChartPanel title="Litros entregados por día">
             <LitrosLineChart
               data={litrosByDay}
               selectedDate={selectedDate}
@@ -187,7 +213,7 @@ export default function Resumen() {
 
           <ChartPanel title="Evolucion composicion (grasa y proteina)">
             <CalidadLineChart
-              data={calidadChartVisible}
+              data={calidadChart}
               selectedDate={selectedDate}
               onDateSelect={handleDateSelect}
             />

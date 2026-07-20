@@ -3,39 +3,31 @@ import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import {
   filterLastDays,
-  getCurrentMonthRange,
   groupSumByDate,
   groupSumByMonth,
   litrosByYearMonth,
   rowsOnDate,
-  sumRemisionesMonth,
   toggleSelectedDate,
 } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
 import LitrosBarChart from '../components/LitrosBarChart';
 import LitrosLineChart from '../components/LitrosLineChart';
 import YearCompareLineChart from '../components/YearCompareLineChart';
 import LoadingScreen from '../components/LoadingScreen';
+import PeriodFilter from '../components/PeriodFilter';
 import SelectedDateBanner from '../components/SelectedDateBanner';
 
 export default function Remisiones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
-  const [chartRegistros, setChartRegistros] = useState([]);
   const [chartDays, setChartDays] = useState(30);
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState(DATA_FROM_DATE);
   const [to, setTo] = useState('');
-  const monthLabel = getCurrentMonthRange().label;
-
-  async function loadChartRegistros() {
-    const data = await api(`/api/remisiones?from=${DATA_FROM_DATE}`);
-    setChartRegistros(filterFromMinDate(data.data, 'doc_date'));
-  }
 
   async function loadRegistros() {
     const params = new URLSearchParams();
@@ -48,7 +40,7 @@ export default function Remisiones() {
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadRegistros(), loadChartRegistros()]);
+        await loadRegistros();
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -78,37 +70,34 @@ export default function Remisiones() {
   }
 
   const chartLitros = useMemo(
-    () => filterLastDays(groupSumByDate(chartRegistros, 'doc_date', 'quantity'), chartDays),
-    [chartRegistros, chartDays]
+    () => filterLastDays(groupSumByDate(registros, 'doc_date', 'quantity'), chartDays),
+    [registros, chartDays]
   );
 
   const yearCompare = useMemo(
-    () => litrosByYearMonth(chartRegistros, 'doc_date', 'quantity'),
-    [chartRegistros]
+    () => litrosByYearMonth(registros, 'doc_date', 'quantity'),
+    [registros]
   );
 
   const litrosPorMes = useMemo(
-    () => groupSumByMonth(chartRegistros, 'doc_date', 'quantity').slice(-12),
-    [chartRegistros]
+    () => groupSumByMonth(registros, 'doc_date', 'quantity').slice(-12),
+    [registros]
   );
 
   const selectedRemisiones = useMemo(
-    () => rowsOnDate(chartRegistros, 'doc_date', selectedDate),
-    [chartRegistros, selectedDate]
+    () => rowsOnDate(registros, 'doc_date', selectedDate),
+    [registros, selectedDate]
   );
 
-  const ultimo = selectedDate ? selectedRemisiones[0] || null : chartRegistros[0] || null;
+  const ultimo = selectedDate ? selectedRemisiones[0] || null : registros[0] || null;
 
-  const totalesDia = useMemo(() => {
-    if (!selectedDate) return null;
+  const totales = useMemo(() => {
+    const src = selectedDate ? selectedRemisiones : registros;
     return {
-      total_litros: selectedRemisiones.reduce((sum, row) => sum + (Number(row.quantity) || 0), 0),
-      total_importe: selectedRemisiones.reduce((sum, row) => sum + (Number(row.line_total) || 0), 0),
-      entregas: selectedRemisiones.length,
+      total_litros: src.reduce((sum, row) => sum + (Number(row.quantity) || 0), 0),
+      entregas: src.length,
     };
-  }, [selectedDate, selectedRemisiones]);
-
-  const totales = selectedDate ? totalesDia : sumRemisionesMonth(chartRegistros);
+  }, [selectedDate, selectedRemisiones, registros]);
 
   const tablaRegistros = selectedDate ? selectedRemisiones : registros;
 
@@ -127,6 +116,8 @@ export default function Remisiones() {
       <main className="main">
         <h2 className="page-title">Remisiones</h2>
         {error && <div className="error-msg">{error}</div>}
+
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onSubmit={handleFilter} />
 
         <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
 
@@ -147,12 +138,8 @@ export default function Remisiones() {
           </div>
 
           <div className="stat-card">
-            <h3>
-              {selectedDate
-                ? `Totales del ${fmtDate(selectedDate)}`
-                : `Totales mes corriente (${monthLabel})`}
-            </h3>
-            {totales && totales.entregas > 0 ? (
+            <h3>{selectedDate ? `Totales del ${fmtDate(selectedDate)}` : 'Totales del período'}</h3>
+            {totales.entregas > 0 ? (
               <>
                 <div className="stat-row"><span>Litros entregados</span><span className="value">{fmt(totales.total_litros)}</span></div>
                 <div className="stat-row"><span>Entregas</span><span className="value">{totales.entregas}</span></div>
@@ -194,20 +181,6 @@ export default function Remisiones() {
         <ChartPanel title="Litros por mes — comparación de años">
           <YearCompareLineChart data={yearCompare.data} years={yearCompare.years} />
         </ChartPanel>
-
-        <form className="filters" onSubmit={handleFilter}>
-          <div className="form-group">
-            <label htmlFor="from">Desde</label>
-            <input id="from" type="date" min={DATA_FROM_DATE} value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label htmlFor="to">Hasta</label>
-            <input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-          <button type="submit" className="btn btn-primary" style={{ width: 'auto' }}>
-            Filtrar
-          </button>
-        </form>
 
         <div className="table-wrap">
           {tablaRegistros.length === 0 ? (
