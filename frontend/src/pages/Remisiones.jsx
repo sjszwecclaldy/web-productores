@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import {
-  filterLastDays,
   groupSumByDate,
   groupSumByMonth,
   litrosByYearMonth,
@@ -22,17 +21,16 @@ import SelectedDateBanner from '../components/SelectedDateBanner';
 export default function Remisiones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
-  const [chartDays, setChartDays] = useState(30);
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState(DATA_FROM_DATE);
   const [to, setTo] = useState('');
 
-  async function loadRegistros() {
+  async function loadRegistros(f = from, t = to) {
     const params = new URLSearchParams();
-    params.set('from', buildQueryFrom(from));
-    if (to) params.set('to', to);
+    params.set('from', buildQueryFrom(f));
+    if (t) params.set('to', t);
     const data = await api(`/api/remisiones?${params.toString()}`);
     setRegistros(filterFromMinDate(data.data, 'doc_date'));
   }
@@ -55,13 +53,12 @@ export default function Remisiones() {
     init();
   }, [navigate]);
 
-  async function handleFilter(e) {
-    e.preventDefault();
+  async function applyPeriod(f, t) {
     setLoading(true);
     setError('');
     setSelectedDate(null);
     try {
-      await loadRegistros();
+      await loadRegistros(f, t);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -70,8 +67,8 @@ export default function Remisiones() {
   }
 
   const chartLitros = useMemo(
-    () => filterLastDays(groupSumByDate(registros, 'doc_date', 'quantity'), chartDays),
-    [registros, chartDays]
+    () => groupSumByDate(registros, 'doc_date', 'quantity'),
+    [registros]
   );
 
   const yearCompare = useMemo(
@@ -117,7 +114,7 @@ export default function Remisiones() {
         <h2 className="page-title">Remisiones</h2>
         {error && <div className="error-msg">{error}</div>}
 
-        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onSubmit={handleFilter} />
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onApply={applyPeriod} />
 
         <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
 
@@ -150,23 +147,7 @@ export default function Remisiones() {
           </div>
         </div>
 
-        <ChartPanel
-          title="Litros entregados por dia"
-          actions={
-            <div className="period-toggle">
-              {[14, 30, 90].map((days) => (
-                <button
-                  key={days}
-                  type="button"
-                  className={`period-toggle__btn${chartDays === days ? ' active' : ''}`}
-                  onClick={() => setChartDays(days)}
-                >
-                  {days} dias
-                </button>
-              ))}
-            </div>
-          }
-        >
+        <ChartPanel title="Litros entregados por dia">
           <LitrosBarChart
             data={chartLitros}
             selectedDate={selectedDate}

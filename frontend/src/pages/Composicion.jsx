@@ -64,10 +64,10 @@ export default function Composicion() {
   const [from, setFrom] = useState(DATA_FROM_DATE);
   const [to, setTo] = useState('');
 
-  async function loadRegistros() {
+  async function loadRegistros(f = from, t = to) {
     const params = new URLSearchParams();
-    params.set('from', buildQueryFrom(from));
-    if (to) params.set('to', to);
+    params.set('from', buildQueryFrom(f));
+    if (t) params.set('to', t);
     const data = await api(`/api/calidad-composicion?${params.toString()}`);
     setRegistros(filterFromMinDate(data.data, 'collection_date'));
   }
@@ -90,13 +90,12 @@ export default function Composicion() {
     init();
   }, [navigate]);
 
-  async function handleFilter(e) {
-    e.preventDefault();
+  async function applyPeriod(f, t) {
     setLoading(true);
     setError('');
     setSelectedDate(null);
     try {
-      await loadRegistros();
+      await loadRegistros(f, t);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -131,7 +130,7 @@ export default function Composicion() {
         <h2 className="page-title">Composición</h2>
         {error && <div className="error-msg">{error}</div>}
 
-        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onSubmit={handleFilter} />
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onApply={applyPeriod} />
 
         <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
 

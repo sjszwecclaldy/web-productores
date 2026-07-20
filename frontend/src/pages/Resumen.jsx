@@ -36,10 +36,10 @@ export default function Resumen() {
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState('');
 
-  async function loadAll() {
+  async function loadAll(f = from, t = to) {
     const params = new URLSearchParams();
-    params.set('from', buildQueryFrom(from));
-    if (to) params.set('to', to);
+    params.set('from', buildQueryFrom(f));
+    if (t) params.set('to', t);
     const qs = params.toString();
     const [remData, calData, sanData] = await Promise.all([
       api(`/api/remisiones?${qs}`),
@@ -69,13 +69,12 @@ export default function Resumen() {
     init();
   }, [navigate]);
 
-  async function handleFilter(e) {
-    e.preventDefault();
+  async function applyPeriod(f, t) {
     setLoading(true);
     setError('');
     setSelectedDate(null);
     try {
-      await loadAll();
+      await loadAll(f, t);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -155,7 +154,7 @@ export default function Resumen() {
         <h2 className="page-title">Resumen</h2>
         {error && <div className="error-msg">{error}</div>}
 
-        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onSubmit={handleFilter} />
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onApply={applyPeriod} />
 
         <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
 

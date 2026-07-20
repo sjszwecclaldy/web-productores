@@ -25,10 +25,10 @@ export default function Reliquidaciones() {
   const [from, setFrom] = useState(DATA_FROM_DATE);
   const [to, setTo] = useState('');
 
-  async function loadRegistros() {
+  async function loadRegistros(f = from, t = to) {
     const params = new URLSearchParams();
-    params.set('from', buildQueryFrom(from));
-    if (to) params.set('to', to);
+    params.set('from', buildQueryFrom(f));
+    if (t) params.set('to', t);
     const data = await api(`/api/reliquidaciones?${params.toString()}`);
     setRegistros(filterFromMinDate(data.data, 'doc_date'));
   }
@@ -51,13 +51,12 @@ export default function Reliquidaciones() {
     init();
   }, [navigate]);
 
-  async function handleFilter(e) {
-    e.preventDefault();
+  async function applyPeriod(f, t) {
     setLoading(true);
     setError('');
     setSelectedMonth(null);
     try {
-      await loadRegistros();
+      await loadRegistros(f, t);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -106,7 +105,7 @@ export default function Reliquidaciones() {
         <h2 className="page-title">Reliquidaciones</h2>
         {error && <div className="error-msg">{error}</div>}
 
-        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onSubmit={handleFilter} />
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onApply={applyPeriod} />
 
         <SelectedMonthBanner month={selectedMonth} onClear={() => setSelectedMonth(null)} />
 
