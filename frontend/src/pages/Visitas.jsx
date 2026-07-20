@@ -200,11 +200,33 @@ export default function Visitas() {
             </div>
             <div className="form-group" style={{ marginTop: '0.5rem' }}>
               <label htmlFor="v-comentarios">Comentarios / observaciones</label>
-              <textarea id="v-comentarios" rows={3} value={form.comentarios} onChange={update('comentarios')} />
+              <textarea
+                id="v-comentarios"
+                rows={3}
+                value={form.comentarios}
+                onChange={update('comentarios')}
+                ref={(el) => {
+                  if (el) {
+                    el.style.height = 'auto';
+                    el.style.height = `${el.scrollHeight}px`;
+                  }
+                }}
+              />
             </div>
             <div className="form-group">
               <label htmlFor="v-accion">Acción acordada</label>
-              <textarea id="v-accion" rows={2} value={form.accion} onChange={update('accion')} />
+              <textarea
+                id="v-accion"
+                rows={2}
+                value={form.accion}
+                onChange={update('accion')}
+                ref={(el) => {
+                  if (el) {
+                    el.style.height = 'auto';
+                    el.style.height = `${el.scrollHeight}px`;
+                  }
+                }}
+              />
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
               <button type="submit" className="btn btn-primary" style={{ width: 'auto' }} disabled={saving}>
