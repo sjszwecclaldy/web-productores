@@ -25,6 +25,8 @@ const COLUMNAS = [
   { key: 'proteina', label: 'Proteína', num: true },
   { key: 'lactosa', label: 'Lactosa', num: true },
   { key: 'solidos', label: 'Sólidos', num: true },
+  { key: 'celulas', label: 'Cél. som.', num: true },
+  { key: 'bacterias', label: 'Rec. bact.', num: true },
 ];
 
 function desdeDias(dias) {
@@ -179,6 +181,8 @@ export default function PanelComparativo() {
             <KpiCard label="Importe liquidado" value={fmt(kpis.total_importe_liquidado)} />
             <KpiCard label="Prom. grasa" value={fmt(kpis.promedio_grasa)} />
             <KpiCard label="Prom. proteína" value={fmt(kpis.promedio_proteina)} />
+            <KpiCard label="Prom. células" value={fmt(kpis.promedio_celulas)} />
+            <KpiCard label="Prom. bacterias" value={fmt(kpis.promedio_bacterias)} />
           </div>
         )}
 
@@ -222,6 +226,8 @@ export default function PanelComparativo() {
                     <td className="num">{p.proteina != null ? fmt(p.proteina) : '—'}</td>
                     <td className="num">{p.lactosa != null ? fmt(p.lactosa) : '—'}</td>
                     <td className="num">{p.solidos != null ? fmt(p.solidos) : '—'}</td>
+                    <td className="num">{p.celulas != null ? fmt(p.celulas) : '—'}</td>
+                    <td className="num">{p.bacterias != null ? fmt(p.bacterias) : '—'}</td>
                   </tr>
                 ))}
               </tbody>

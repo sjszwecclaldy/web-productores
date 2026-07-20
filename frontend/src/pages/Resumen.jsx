@@ -26,6 +26,7 @@ export default function Resumen() {
   const navigate = useNavigate();
   const [remisiones, setRemisiones] = useState([]);
   const [calidad, setCalidad] = useState([]);
+  const [calidadSan, setCalidadSan] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,12 +37,14 @@ export default function Resumen() {
       try {
         const yearStart = `${new Date().getFullYear()}-01-01`;
         const remFrom = yearStart < DATA_FROM_DATE ? DATA_FROM_DATE : yearStart;
-        const [remData, calData] = await Promise.all([
+        const [remData, calData, sanData] = await Promise.all([
           api(`/api/remisiones?from=${remFrom}`),
           api(`/api/calidad-composicion?from=${apiFromDate(90)}`),
+          api(`/api/calidad-sanitaria?from=${apiFromDate(180)}`),
         ]);
         setRemisiones(filterFromMinDate(remData.data, 'doc_date'));
         setCalidad(filterFromMinDate(calData.data, 'collection_date'));
+        setCalidadSan(filterFromMinDate(sanData.data, 'lab_date'));
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -73,6 +76,13 @@ export default function Resumen() {
   }, [litrosByDay, selectedDate]);
 
   const promedioDiario = useMemo(() => avgDailyCurrentMonth(litrosByDay), [litrosByDay]);
+
+  const promedioSanitaria = useMemo(() => {
+    const avg = (arr) => (arr.length ? arr.reduce((sum, v) => sum + v, 0) / arr.length : null);
+    const cel = calidadSan.filter((r) => r.celulas != null).map((r) => Number(r.celulas));
+    const bac = calidadSan.filter((r) => r.bacterias != null).map((r) => Number(r.bacterias));
+    return { celulas: avg(cel), bacterias: avg(bac) };
+  }, [calidadSan]);
 
   const selectedRemisiones = useMemo(
     () => rowsOnDate(remisiones, 'doc_date', selectedDate),
@@ -153,6 +163,16 @@ export default function Resumen() {
             icon="🧬"
             label={selectedDate ? `Proteina (${fmtDate(selectedDate)})` : 'Proteina ultima muestra'}
             value={ultimoCal?.protein != null ? `${fmt(ultimoCal.protein)} %` : '—'}
+          />
+          <KpiCard
+            icon="🔬"
+            label="Prom. células somáticas"
+            value={promedioSanitaria.celulas != null ? fmt(promedioSanitaria.celulas) : '—'}
+          />
+          <KpiCard
+            icon="🦠"
+            label="Prom. recuento bacteriano"
+            value={promedioSanitaria.bacterias != null ? fmt(promedioSanitaria.bacterias) : '—'}
           />
         </div>
 

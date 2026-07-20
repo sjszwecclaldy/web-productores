@@ -63,6 +63,15 @@ router.get('/dashboard', async (req, res) => {
          FROM liquidaciones
          WHERE doc_date >= $1 AND ($2::date IS NULL OR doc_date <= $2)
          GROUP BY card_code
+       ),
+       san AS (
+         SELECT card_code,
+                AVG(celulas) AS celulas,
+                AVG(bacterias) AS bacterias,
+                COUNT(*) AS muestras_san
+         FROM calidad_sanitaria
+         WHERE lab_date >= $1 AND ($2::date IS NULL OR lab_date <= $2)
+         GROUP BY card_code
        )
        SELECT p.card_code, p.card_name,
               COALESCE(rem.litros, 0) AS litros,
@@ -71,11 +80,14 @@ router.get('/dashboard', async (req, res) => {
               COALESCE(rem.importe_remitido, 0) AS importe_remitido,
               cal.grasa, cal.proteina, cal.lactosa, cal.solidos,
               COALESCE(cal.muestras, 0) AS muestras,
+              san.celulas, san.bacterias,
+              COALESCE(san.muestras_san, 0) AS muestras_san,
               COALESCE(liq.importe_liquidado, 0) AS importe_liquidado
        FROM productores p
        LEFT JOIN rem ON rem.card_code = p.card_code
        LEFT JOIN cal ON cal.card_code = p.card_code
        LEFT JOIN liq ON liq.card_code = p.card_code
+       LEFT JOIN san ON san.card_code = p.card_code
        WHERE p.role = 'productor'
        ORDER BY litros DESC`,
       [desde, hasta]
@@ -86,6 +98,13 @@ router.get('/dashboard', async (req, res) => {
               AVG(lactose) AS lactosa, AVG(ts) AS solidos
        FROM calidad_composicion
        WHERE collection_date >= $1 AND ($2::date IS NULL OR collection_date <= $2)`,
+      [desde, hasta]
+    );
+
+    const sanitariaGlobalQ = await query(
+      `SELECT AVG(celulas) AS celulas, AVG(bacterias) AS bacterias
+       FROM calidad_sanitaria
+       WHERE lab_date >= $1 AND ($2::date IS NULL OR lab_date <= $2)`,
       [desde, hasta]
     );
 
@@ -101,6 +120,7 @@ router.get('/dashboard', async (req, res) => {
     const productores = productoresQ.rows;
     const num = (v) => Number(v) || 0;
     const g = calidadGlobalQ.rows[0] || {};
+    const s = sanitariaGlobalQ.rows[0] || {};
 
     const kpis = {
       productores_con_datos: productores.filter((p) => num(p.entregas) > 0).length,
@@ -111,6 +131,8 @@ router.get('/dashboard', async (req, res) => {
       promedio_proteina: g.proteina,
       promedio_lactosa: g.lactosa,
       promedio_solidos: g.solidos,
+      promedio_celulas: s.celulas,
+      promedio_bacterias: s.bacterias,
     };
 
     res.json({

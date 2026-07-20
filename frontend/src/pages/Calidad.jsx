@@ -6,6 +6,7 @@ import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fm
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
+import KpiCard from '../components/KpiCard';
 import LoadingScreen from '../components/LoadingScreen';
 import QualityGauge from '../components/QualityGauge';
 
@@ -80,6 +81,13 @@ export default function Calidad() {
 
   const ultima = chartRegistros[0] || null;
 
+  const promedios = useMemo(() => {
+    const avg = (arr) => (arr.length ? arr.reduce((sum, v) => sum + v, 0) / arr.length : null);
+    const cel = registros.filter((r) => r.celulas != null).map((r) => Number(r.celulas));
+    const bac = registros.filter((r) => r.bacterias != null).map((r) => Number(r.bacterias));
+    return { celulas: avg(cel), bacterias: avg(bac) };
+  }, [registros]);
+
   if (loading && chartRegistros.length === 0) {
     return <LoadingScreen />;
   }
@@ -91,6 +99,19 @@ export default function Calidad() {
       <main className="main">
         <h2 className="page-title">Calidad</h2>
         {error && <div className="error-msg">{error}</div>}
+
+        <div className="kpi-grid">
+          <KpiCard
+            icon="🔬"
+            label="Prom. células somáticas"
+            value={promedios.celulas != null ? fmt(promedios.celulas) : '—'}
+          />
+          <KpiCard
+            icon="🦠"
+            label="Prom. recuento bacteriano"
+            value={promedios.bacterias != null ? fmt(promedios.bacterias) : '—'}
+          />
+        </div>
 
         <ChartPanel
           title={ultima ? `Última muestra (${fmtDate(ultima.lab_date)}) — medidores` : 'Última muestra — medidores'}
@@ -141,7 +162,6 @@ export default function Calidad() {
                   <th>Fecha</th>
                   <th className="num">Células somáticas</th>
                   <th className="num">Recuento bacteriano</th>
-                  <th>Origen</th>
                 </tr>
               </thead>
               <tbody>
@@ -150,7 +170,6 @@ export default function Calidad() {
                     <td>{fmtDate(r.lab_date)}</td>
                     <td className="num">{fmt(r.celulas)}</td>
                     <td className="num">{fmt(r.bacterias)}</td>
-                    <td>{r.origen || ''}</td>
                   </tr>
                 ))}
               </tbody>
