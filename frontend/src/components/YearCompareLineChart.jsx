@@ -8,19 +8,23 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useContext } from 'react';
 import { CHART_COLORS } from '../chartUtils';
+import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
 const YEAR_COLORS = [CHART_COLORS.primary, CHART_COLORS.accent, CHART_COLORS.gold, '#8a6d3b', '#5a6d62'];
 
 // Comparación de años: una línea por año, eje X = meses (Ene–Dic).
 export default function YearCompareLineChart({ data, years, emptyMessage = 'Sin datos para comparar' }) {
+  const ctxHeight = useContext(ChartHeightContext);
+
   if (!data || data.length === 0 || !years || years.length === 0) {
     return <p className="chart-empty">{emptyMessage}</p>;
   }
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={ctxHeight ?? 300}>
       <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} vertical={false} />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#5a6d62' }} />

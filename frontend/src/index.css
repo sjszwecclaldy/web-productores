@@ -482,7 +482,7 @@ a {
   display: flex;
   flex-direction: column;
   width: min(1200px, 96vw);
-  height: min(90vh, 900px);
+  max-height: 94vh;
   background: var(--surface);
   border-radius: var(--radius);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
@@ -522,20 +522,13 @@ a {
 }
 
 .chart-modal__body {
-  flex: 1 1 auto;
-  min-height: 0;
   padding: 1.25rem 1.5rem 1.5rem;
   overflow: auto;
 }
 
-/* El grafico llena toda la tarjeta del modal (elimina el espacio en blanco sobrante). */
-.chart-modal__body .recharts-responsive-container {
-  height: 100% !important;
-  min-height: 420px;
-}
-
 .chart-modal__body .gauges-row {
-  min-height: 340px;
+  min-height: 320px;
+  align-items: center;
 }
 
 .btn {

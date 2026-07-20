@@ -8,7 +8,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useContext } from 'react';
 import { CHART_COLORS } from '../chartUtils';
+import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
 function isSameChartDate(a, b) {
@@ -46,6 +48,8 @@ export default function CalidadLineChart({
   onDateSelect,
   emptyMessage = 'Sin datos para el período',
 }) {
+  const ctxHeight = useContext(ChartHeightContext);
+
   if (!data || data.length === 0) {
     return <p className="chart-empty">{emptyMessage}</p>;
   }
@@ -65,7 +69,7 @@ export default function CalidadLineChart({
   }
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
+    <ResponsiveContainer width="100%" height={ctxHeight ?? 280}>
       <LineChart
         data={data}
         margin={{ top: 8, right: 8, left: 0, bottom: 0 }}

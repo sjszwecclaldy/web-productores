@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ChartHeightContext } from './ChartHeightContext';
 
 export default function ChartPanel({ title, children, actions, expandable = true }) {
   const [expanded, setExpanded] = useState(false);
@@ -11,6 +12,10 @@ export default function ChartPanel({ title, children, actions, expandable = true
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [expanded]);
+
+  // Altura del grafico dentro del modal (grande, relativa a la ventana).
+  const modalHeight =
+    typeof window !== 'undefined' ? Math.max(380, Math.round(window.innerHeight * 0.66)) : 560;
 
   return (
     <div className="chart-panel">
@@ -51,7 +56,9 @@ export default function ChartPanel({ title, children, actions, expandable = true
                 ×
               </button>
             </div>
-            <div className="chart-modal__body">{children}</div>
+            <div className="chart-modal__body">
+              <ChartHeightContext.Provider value={modalHeight}>{children}</ChartHeightContext.Provider>
+            </div>
           </div>
         </div>
       )}

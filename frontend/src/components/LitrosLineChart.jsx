@@ -7,7 +7,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useContext } from 'react';
 import { CHART_COLORS } from '../chartUtils';
+import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
 // Línea de litros (serie única). Sirve para muchos puntos diarios (dots=false, año corriente)
@@ -19,6 +21,8 @@ export default function LitrosLineChart({
   dots = false,
   emptyMessage = 'Sin datos para el período',
 }) {
+  const ctxHeight = useContext(ChartHeightContext);
+
   if (!data || data.length === 0) {
     return <p className="chart-empty">{emptyMessage}</p>;
   }
@@ -33,7 +37,7 @@ export default function LitrosLineChart({
   }
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
+    <ResponsiveContainer width="100%" height={ctxHeight ?? 280}>
       <LineChart
         data={chartData}
         margin={{ top: 8, right: 12, left: 0, bottom: 0 }}

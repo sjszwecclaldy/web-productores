@@ -8,7 +8,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useContext } from 'react';
 import { CHART_COLORS } from '../chartUtils';
+import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
 const MAX_LABEL = 20;
@@ -43,6 +45,8 @@ export default function RankingBarChart({
   unit = '',
   emptyMessage = 'Sin datos para el período',
 }) {
+  const ctxHeight = useContext(ChartHeightContext);
+
   if (!data || data.length === 0) {
     return <p className="chart-empty">{emptyMessage}</p>;
   }
@@ -53,7 +57,7 @@ export default function RankingBarChart({
   const chartData = data.map((d) => ({ ...d, [dataKey]: Number(d[dataKey]) }));
 
   return (
-    <ResponsiveContainer width="100%" height={Math.max(240, chartData.length * 38)}>
+    <ResponsiveContainer width="100%" height={ctxHeight ?? Math.max(240, chartData.length * 38)}>
       <BarChart data={chartData} layout="vertical" margin={{ top: 8, right: 40, left: 8, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} horizontal={false} />
         <XAxis
