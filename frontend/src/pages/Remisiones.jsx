@@ -8,7 +8,7 @@ import {
   rowsOnDate,
   toggleSelectedDate,
 } from '../chartUtils';
-import { buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
 import LitrosBarChart from '../components/LitrosBarChart';
@@ -21,10 +21,12 @@ import SelectedDateBanner from '../components/SelectedDateBanner';
 export default function Remisiones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
+  const [allRegistros, setAllRegistros] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState(DATA_FROM_DATE);
+  const [activePreset, setActivePreset] = useState(30);
+  const [from, setFrom] = useState(() => apiFromDate(30));
   const [to, setTo] = useState('');
 
   async function loadRegistros(f = from, t = to) {
@@ -35,10 +37,16 @@ export default function Remisiones() {
     setRegistros(filterFromMinDate(data.data, 'doc_date'));
   }
 
+  // Serie completa (sin filtro): alimenta solo el grafico de comparacion de anos.
+  async function loadYearData() {
+    const data = await api(`/api/remisiones?from=${DATA_FROM_DATE}`);
+    setAllRegistros(filterFromMinDate(data.data, 'doc_date'));
+  }
+
   useEffect(() => {
     async function init() {
       try {
-        await loadRegistros();
+        await Promise.all([loadRegistros(), loadYearData()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -53,7 +61,10 @@ export default function Remisiones() {
     init();
   }, [navigate]);
 
-  async function applyPeriod(f, t) {
+  async function applyPeriod(f, t, preset) {
+    setFrom(f);
+    setTo(t);
+    setActivePreset(preset);
     setLoading(true);
     setError('');
     setSelectedDate(null);
@@ -72,8 +83,8 @@ export default function Remisiones() {
   );
 
   const yearCompare = useMemo(
-    () => litrosByYearMonth(registros, 'doc_date', 'quantity'),
-    [registros]
+    () => litrosByYearMonth(allRegistros, 'doc_date', 'quantity'),
+    [allRegistros]
   );
 
   const litrosPorMes = useMemo(
@@ -114,7 +125,7 @@ export default function Remisiones() {
         <h2 className="page-title">Remisiones</h2>
         {error && <div className="error-msg">{error}</div>}
 
-        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onApply={applyPeriod} />
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} activePreset={activePreset} onApply={applyPeriod} />
 
         <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
 

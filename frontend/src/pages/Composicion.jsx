@@ -7,7 +7,7 @@ import {
   rowsOnDate,
   toggleSelectedDate,
 } from '../chartUtils';
-import { buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
@@ -61,7 +61,8 @@ export default function Composicion() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState(DATA_FROM_DATE);
+  const [activePreset, setActivePreset] = useState(30);
+  const [from, setFrom] = useState(() => apiFromDate(30));
   const [to, setTo] = useState('');
 
   async function loadRegistros(f = from, t = to) {
@@ -90,7 +91,10 @@ export default function Composicion() {
     init();
   }, [navigate]);
 
-  async function applyPeriod(f, t) {
+  async function applyPeriod(f, t, preset) {
+    setFrom(f);
+    setTo(t);
+    setActivePreset(preset);
     setLoading(true);
     setError('');
     setSelectedDate(null);
@@ -130,7 +134,7 @@ export default function Composicion() {
         <h2 className="page-title">Composición</h2>
         {error && <div className="error-msg">{error}</div>}
 
-        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onApply={applyPeriod} />
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} activePreset={activePreset} onApply={applyPeriod} />
 
         <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
 

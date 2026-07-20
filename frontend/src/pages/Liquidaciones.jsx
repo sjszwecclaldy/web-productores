@@ -7,7 +7,7 @@ import {
   rowsOnMonth,
   toggleSelectedMonth,
 } from '../chartUtils';
-import { buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
 import LoadingScreen from '../components/LoadingScreen';
@@ -21,7 +21,8 @@ export default function Liquidaciones() {
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState(DATA_FROM_DATE);
+  const [activePreset, setActivePreset] = useState(365);
+  const [from, setFrom] = useState(() => apiFromDate(365));
   const [to, setTo] = useState('');
 
   async function loadRegistros(f = from, t = to) {
@@ -50,7 +51,10 @@ export default function Liquidaciones() {
     init();
   }, [navigate]);
 
-  async function applyPeriod(f, t) {
+  async function applyPeriod(f, t, preset) {
+    setFrom(f);
+    setTo(t);
+    setActivePreset(preset);
     setLoading(true);
     setError('');
     setSelectedMonth(null);
@@ -96,7 +100,7 @@ export default function Liquidaciones() {
         <h2 className="page-title">Liquidaciones</h2>
         {error && <div className="error-msg">{error}</div>}
 
-        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onApply={applyPeriod} />
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} activePreset={activePreset} onApply={applyPeriod} />
 
         <SelectedMonthBanner month={selectedMonth} onClear={() => setSelectedMonth(null)} />
 

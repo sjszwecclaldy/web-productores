@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import { CHART_COLORS, formatChartDate } from '../chartUtils';
-import { buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
@@ -16,7 +16,8 @@ export default function Calidad() {
   const [registros, setRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState(DATA_FROM_DATE);
+  const [activePreset, setActivePreset] = useState(30);
+  const [from, setFrom] = useState(() => apiFromDate(30));
   const [to, setTo] = useState('');
 
   async function loadRegistros(f = from, t = to) {
@@ -45,7 +46,10 @@ export default function Calidad() {
     init();
   }, [navigate]);
 
-  async function applyPeriod(f, t) {
+  async function applyPeriod(f, t, preset) {
+    setFrom(f);
+    setTo(t);
+    setActivePreset(preset);
     setLoading(true);
     setError('');
     try {
@@ -91,7 +95,7 @@ export default function Calidad() {
         <h2 className="page-title">Calidad</h2>
         {error && <div className="error-msg">{error}</div>}
 
-        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onApply={applyPeriod} />
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} activePreset={activePreset} onApply={applyPeriod} />
 
         <div className="kpi-grid">
           <KpiCard

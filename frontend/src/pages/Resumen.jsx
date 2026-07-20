@@ -9,7 +9,7 @@ import {
   rowsOnDate,
   toggleSelectedDate,
 } from '../chartUtils';
-import { buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
@@ -20,11 +20,6 @@ import PeriodFilter from '../components/PeriodFilter';
 import QualityGauge from '../components/QualityGauge';
 import SelectedDateBanner from '../components/SelectedDateBanner';
 
-function defaultFrom() {
-  const yearStart = `${new Date().getFullYear()}-01-01`;
-  return yearStart < DATA_FROM_DATE ? DATA_FROM_DATE : yearStart;
-}
-
 export default function Resumen() {
   const navigate = useNavigate();
   const [remisiones, setRemisiones] = useState([]);
@@ -33,7 +28,8 @@ export default function Resumen() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState(defaultFrom);
+  const [activePreset, setActivePreset] = useState(30);
+  const [from, setFrom] = useState(() => apiFromDate(30));
   const [to, setTo] = useState('');
 
   async function loadAll(f = from, t = to) {
@@ -69,7 +65,10 @@ export default function Resumen() {
     init();
   }, [navigate]);
 
-  async function applyPeriod(f, t) {
+  async function applyPeriod(f, t, preset) {
+    setFrom(f);
+    setTo(t);
+    setActivePreset(preset);
     setLoading(true);
     setError('');
     setSelectedDate(null);
@@ -154,7 +153,7 @@ export default function Resumen() {
         <h2 className="page-title">Resumen</h2>
         {error && <div className="error-msg">{error}</div>}
 
-        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} onApply={applyPeriod} />
+        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} activePreset={activePreset} onApply={applyPeriod} />
 
         <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
 
