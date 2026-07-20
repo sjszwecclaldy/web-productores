@@ -7,6 +7,9 @@ const router = express.Router();
 router.use(requireJwt);
 router.use(requireAdmin);
 
+// Temas permitidos para las visitas del departamento tecnico.
+const TEMAS_VISITA = ['Calidad de Leche', 'Antibiótico', 'Visita de rutina', 'Otros'];
+
 router.get('/productores', async (_req, res) => {
   try {
     const { rows } = await query(
@@ -118,6 +121,120 @@ router.get('/dashboard', async (req, res) => {
     });
   } catch (err) {
     console.error('admin dashboard error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// --- Visitas del departamento tecnico (carga manual por el admin) ---
+
+router.get('/visitas', async (req, res) => {
+  const cardCode = String(req.query.card_code || '').trim();
+  if (!cardCode) {
+    return res.status(400).json({ error: 'Falta card_code' });
+  }
+  try {
+    const { rows } = await query(
+      `SELECT id,
+              to_char(fecha, 'YYYY-MM-DD') AS fecha,
+              tema, tecnico, comentarios, accion,
+              to_char(proxima_visita, 'YYYY-MM-DD') AS proxima_visita
+       FROM visitas_tecnicas
+       WHERE card_code = $1
+       ORDER BY fecha DESC, id DESC`,
+      [cardCode]
+    );
+    res.json({ data: rows });
+  } catch (err) {
+    console.error('admin visitas list error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.post('/visitas', async (req, res) => {
+  const { card_code, fecha, tema, tecnico, comentarios, accion, proxima_visita } = req.body;
+
+  if (!card_code || !fecha || !tema) {
+    return res.status(400).json({ error: 'Faltan card_code, fecha o tema' });
+  }
+  if (!TEMAS_VISITA.includes(tema)) {
+    return res.status(400).json({ error: 'Tema inválido' });
+  }
+
+  try {
+    const { rows } = await query(
+      `INSERT INTO visitas_tecnicas
+         (card_code, fecha, tema, tecnico, comentarios, accion, proxima_visita)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id`,
+      [
+        String(card_code).trim(),
+        fecha,
+        tema,
+        tecnico || null,
+        comentarios || null,
+        accion || null,
+        proxima_visita || null,
+      ]
+    );
+    res.json({ ok: true, id: rows[0].id });
+  } catch (err) {
+    console.error('admin visitas create error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.put('/visitas/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: 'id inválido' });
+  }
+  const { fecha, tema, tecnico, comentarios, accion, proxima_visita } = req.body;
+  if (!fecha || !tema) {
+    return res.status(400).json({ error: 'Faltan fecha o tema' });
+  }
+  if (!TEMAS_VISITA.includes(tema)) {
+    return res.status(400).json({ error: 'Tema inválido' });
+  }
+
+  try {
+    const { rowCount } = await query(
+      `UPDATE visitas_tecnicas
+       SET fecha = $2, tema = $3, tecnico = $4, comentarios = $5,
+           accion = $6, proxima_visita = $7, updated_at = NOW()
+       WHERE id = $1`,
+      [
+        id,
+        fecha,
+        tema,
+        tecnico || null,
+        comentarios || null,
+        accion || null,
+        proxima_visita || null,
+      ]
+    );
+    if (rowCount === 0) {
+      return res.status(404).json({ error: 'Visita no encontrada' });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('admin visitas update error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.delete('/visitas/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: 'id inválido' });
+  }
+  try {
+    const { rowCount } = await query('DELETE FROM visitas_tecnicas WHERE id = $1', [id]);
+    if (rowCount === 0) {
+      return res.status(404).json({ error: 'Visita no encontrada' });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('admin visitas delete error:', err);
     res.status(500).json({ error: 'Error interno' });
   }
 });

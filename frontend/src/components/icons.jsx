@@ -46,6 +46,16 @@ export function IconReliquidaciones() {
   );
 }
 
+export function IconVisitas() {
+  return (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="M9 3v2h6V3" />
+      <path d="M9 11l1.5 1.5L13 10M9 16h5" />
+    </svg>
+  );
+}
+
 export function IconComparativa() {
   return (
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>

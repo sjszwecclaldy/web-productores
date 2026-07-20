@@ -11,6 +11,7 @@ const liquidacionesRoutes = require('./routes/liquidaciones');
 const reliquidacionesRoutes = require('./routes/reliquidaciones');
 const calidadSanitariaRoutes = require('./routes/calidad-sanitaria');
 const adminRoutes = require('./routes/admin');
+const visitasRoutes = require('./routes/visitas');
 const internalRoutes = require('./routes/internal');
 
 const app = express();
@@ -43,6 +44,7 @@ app.use('/api/liquidaciones', liquidacionesRoutes);
 app.use('/api/reliquidaciones', reliquidacionesRoutes);
 app.use('/api/calidad-sanitaria', calidadSanitariaRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/visitas', visitasRoutes);
 app.use('/internal', internalRoutes);
 
 async function runMigrations() {

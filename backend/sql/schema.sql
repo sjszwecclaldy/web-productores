@@ -131,3 +131,18 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 );
 
 CREATE INDEX IF NOT EXISTS idx_password_reset_token ON password_reset_tokens (token);
+
+CREATE TABLE IF NOT EXISTS visitas_tecnicas (
+  id SERIAL PRIMARY KEY,
+  card_code TEXT NOT NULL,
+  fecha DATE NOT NULL,
+  tema TEXT NOT NULL,
+  tecnico TEXT,
+  comentarios TEXT,
+  accion TEXT,
+  proxima_visita DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_visitas_card_fecha ON visitas_tecnicas (card_code, fecha DESC);
