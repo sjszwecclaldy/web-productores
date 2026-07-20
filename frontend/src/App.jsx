@@ -13,6 +13,7 @@ import Remisiones from './pages/Remisiones';
 import Liquidaciones from './pages/Liquidaciones';
 import Reliquidaciones from './pages/Reliquidaciones';
 import Visitas from './pages/Visitas';
+import Comunicados from './pages/Comunicados';
 
 function PrivateRoute({ children }) {
   return getToken() ? children : <Navigate to="/login" replace />;
@@ -122,6 +123,14 @@ export default function App() {
             <AdminProducerGate>
               <Visitas />
             </AdminProducerGate>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/comunicados"
+        element={
+          <PrivateRoute>
+            <Comunicados />
           </PrivateRoute>
         }
       />

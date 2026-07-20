@@ -261,4 +261,90 @@ router.delete('/visitas/:id', async (req, res) => {
   }
 });
 
+// --- Comunicados a productores (carga manual por el admin) ---
+
+router.get('/comunicados', async (_req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT c.id, c.card_code, p.card_name, c.titulo, c.cuerpo, c.importante,
+              to_char(c.created_at, 'YYYY-MM-DD') AS fecha
+       FROM comunicados c
+       LEFT JOIN productores p ON p.card_code = c.card_code
+       ORDER BY c.created_at DESC`
+    );
+    res.json({ data: rows });
+  } catch (err) {
+    console.error('admin comunicados list error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.post('/comunicados', async (req, res) => {
+  const { card_code, titulo, cuerpo, importante } = req.body;
+
+  if (!titulo || !cuerpo) {
+    return res.status(400).json({ error: 'Faltan titulo o cuerpo' });
+  }
+
+  const target = card_code ? String(card_code).trim() : null;
+
+  try {
+    const { rows } = await query(
+      `INSERT INTO comunicados (card_code, titulo, cuerpo, importante)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [target, String(titulo).trim(), String(cuerpo).trim(), Boolean(importante)]
+    );
+    res.json({ ok: true, id: rows[0].id });
+  } catch (err) {
+    console.error('admin comunicados create error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.put('/comunicados/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: 'id inválido' });
+  }
+  const { card_code, titulo, cuerpo, importante } = req.body;
+  if (!titulo || !cuerpo) {
+    return res.status(400).json({ error: 'Faltan titulo o cuerpo' });
+  }
+  const target = card_code ? String(card_code).trim() : null;
+
+  try {
+    const { rowCount } = await query(
+      `UPDATE comunicados
+       SET card_code = $2, titulo = $3, cuerpo = $4, importante = $5, updated_at = NOW()
+       WHERE id = $1`,
+      [id, target, String(titulo).trim(), String(cuerpo).trim(), Boolean(importante)]
+    );
+    if (rowCount === 0) {
+      return res.status(404).json({ error: 'Comunicado no encontrado' });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('admin comunicados update error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.delete('/comunicados/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: 'id inválido' });
+  }
+  try {
+    const { rowCount } = await query('DELETE FROM comunicados WHERE id = $1', [id]);
+    if (rowCount === 0) {
+      return res.status(404).json({ error: 'Comunicado no encontrado' });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('admin comunicados delete error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
 module.exports = router;

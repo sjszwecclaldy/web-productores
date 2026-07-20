@@ -146,3 +146,16 @@ CREATE TABLE IF NOT EXISTS visitas_tecnicas (
 );
 
 CREATE INDEX IF NOT EXISTS idx_visitas_card_fecha ON visitas_tecnicas (card_code, fecha DESC);
+
+CREATE TABLE IF NOT EXISTS comunicados (
+  id SERIAL PRIMARY KEY,
+  card_code TEXT,
+  titulo TEXT NOT NULL,
+  cuerpo TEXT NOT NULL,
+  importante BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_comunicados_card ON comunicados (card_code);
+CREATE INDEX IF NOT EXISTS idx_comunicados_created ON comunicados (created_at DESC);

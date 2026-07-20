@@ -16,6 +16,7 @@ import {
   IconReliquidaciones,
   IconRemisiones,
   IconResumen,
+  IconComunicados,
   IconVisitas,
 } from './icons';
 
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { to: '/liquidaciones', label: 'Liquidaciones', Icon: IconLiquidaciones },
   { to: '/reliquidaciones', label: 'Reliquidaciones', Icon: IconReliquidaciones },
   { to: '/visitas', label: 'Visitas', Icon: IconVisitas },
+  { to: '/comunicados', label: 'Comunicados', Icon: IconComunicados },
 ];
 
 const ADMIN_NAV_ITEM = { to: '/comparativa', label: 'Comparativa', Icon: IconComparativa };
