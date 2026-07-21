@@ -6,7 +6,7 @@ export default function ExportButton({ filename, columns, rows, label = 'Exporta
   return (
     <button
       type="button"
-      className="btn btn-ghost"
+      className="btn btn-primary"
       style={{ width: 'auto' }}
       disabled={disabled}
       onClick={() => exportToExcel(filename, columns, rows)}

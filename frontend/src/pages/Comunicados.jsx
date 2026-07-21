@@ -263,9 +263,10 @@ export default function Comunicados() {
                 </p>
                 {c.cuerpo && <p className="comunicado-card__body">{c.cuerpo}</p>}
                 {c.tiene_archivo && (
-                  <div style={{ marginTop: '0.6rem' }}>
-                    <button type="button" className="btn btn-ghost" style={{ width: 'auto' }} onClick={() => descargar(c)}>
-                      📎 Descargar {c.archivo_nombre || 'archivo'}
+                  <div className="comunicado-card__adjunto">
+                    <span className="comunicado-card__file">📎 {c.archivo_nombre || 'archivo'}</span>
+                    <button type="button" className="link-descargar" onClick={() => descargar(c)}>
+                      Descargar Comunicado
                     </button>
                   </div>
                 )}

@@ -2,43 +2,37 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import { avgCalidadByDate, formatChartDate, groupSumByDate } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
-import ExportButton from '../components/ExportButton';
-import KpiCard from '../components/KpiCard';
 import LitrosLineChart from '../components/LitrosLineChart';
 import LoadingScreen from '../components/LoadingScreen';
 import PeriodFilter from '../components/PeriodFilter';
 
-const EXPORT_COLS = [
-  { header: 'Fecha', value: (r) => fmtDate(r.doc_date) },
-  { header: 'Remito', value: (r) => r.doc_num },
-  { header: 'Litros', value: (r) => r.quantity },
-];
-
 const avg = (arr) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null);
 const nums = (rows, key) => rows.filter((r) => r[key] != null).map((r) => Number(r[key]));
 
-function litrosVal(v) {
-  return v != null ? `${fmt(v)} L` : '—';
-}
-function pctVal(v) {
-  return v != null ? `${fmt(v)} %` : '—';
-}
-function plainVal(v) {
-  return v != null ? fmt(v) : '—';
-}
+const fmtL = (v) => (v != null ? `${fmt(v)} L` : '—');
+const fmtP = (v) => (v != null ? `${fmt(v)} %` : '—');
+const fmtN = (v) => (v != null ? fmt(v) : '—');
 
-function IndicadoresGrid({ litros, grasa, proteina, celulas, bacterias }) {
+// Un indicador con su valor de ultima entrega y su promedio del periodo.
+function MetricCard({ icon, name, ultima, promedio }) {
   return (
-    <div className="kpi-grid">
-      <KpiCard icon="🥛" label="Litros" value={litrosVal(litros)} />
-      <KpiCard icon="🧪" label="Grasa" value={pctVal(grasa)} />
-      <KpiCard icon="🧬" label="Proteína" value={pctVal(proteina)} />
-      <KpiCard icon="🔬" label="Células somáticas" value={plainVal(celulas)} />
-      <KpiCard icon="🦠" label="Recuento bacteriano" value={plainVal(bacterias)} />
+    <div className="metric-card">
+      <div className="metric-card__head">
+        <span className="metric-card__icon">{icon}</span>
+        <span className="metric-card__name">{name}</span>
+      </div>
+      <div className="metric-card__row">
+        <span>Última entrega</span>
+        <strong>{ultima}</strong>
+      </div>
+      <div className="metric-card__row">
+        <span>Promedio período</span>
+        <strong>{promedio}</strong>
+      </div>
     </div>
   );
 }
@@ -139,7 +133,13 @@ export default function Resumen() {
     [litrosByDay, calidad, calidadSan]
   );
 
-  const ultimasEntregas = remisiones.slice(0, 10);
+  const indicadores = [
+    { icon: '🥛', name: 'Litros', u: fmtL(ultima.litros), p: fmtL(promedio.litros) },
+    { icon: '🧪', name: 'Grasa', u: fmtP(ultima.grasa), p: fmtP(promedio.grasa) },
+    { icon: '🧬', name: 'Proteína', u: fmtP(ultima.proteina), p: fmtP(promedio.proteina) },
+    { icon: '🔬', name: 'Células somáticas', u: fmtN(ultima.celulas), p: fmtN(promedio.celulas) },
+    { icon: '🦠', name: 'Recuento bacteriano', u: fmtN(ultima.bacterias), p: fmtN(promedio.bacterias) },
+  ];
 
   if (loading) {
     return <LoadingScreen />;
@@ -155,23 +155,12 @@ export default function Resumen() {
 
         <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} activePreset={activePreset} onApply={applyPeriod} />
 
-        <h3 className="section-title">Última entrega / muestra</h3>
-        <IndicadoresGrid
-          litros={ultima.litros}
-          grasa={ultima.grasa}
-          proteina={ultima.proteina}
-          celulas={ultima.celulas}
-          bacterias={ultima.bacterias}
-        />
-
-        <h3 className="section-title">Promedios del período</h3>
-        <IndicadoresGrid
-          litros={promedio.litros}
-          grasa={promedio.grasa}
-          proteina={promedio.proteina}
-          celulas={promedio.celulas}
-          bacterias={promedio.bacterias}
-        />
+        <h3 className="section-title">Indicadores</h3>
+        <div className="metric-grid">
+          {indicadores.map((m) => (
+            <MetricCard key={m.name} icon={m.icon} name={m.name} ultima={m.u} promedio={m.p} />
+          ))}
+        </div>
 
         <div className="charts-grid">
           <ChartPanel title="Litros entregados por día">
@@ -197,34 +186,6 @@ export default function Resumen() {
           </ChartPanel>
         </div>
 
-        <div className="table-toolbar">
-          <h3 className="section-title" style={{ margin: 0 }}>Últimas entregas</h3>
-          <ExportButton filename="remisiones.xlsx" columns={EXPORT_COLS} rows={remisiones} />
-        </div>
-        <div className="table-wrap table-wrap--flat">
-          {ultimasEntregas.length === 0 ? (
-            <div className="empty-state">Sin entregas recientes.</div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Remito</th>
-                  <th className="num">Litros</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ultimasEntregas.map((r, i) => (
-                  <tr key={`${r.doc_num}-${i}`}>
-                    <td>{fmtDate(r.doc_date)}</td>
-                    <td>{r.doc_num}</td>
-                    <td className="num">{fmt(r.quantity)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
       </main>
     </div>
   );
