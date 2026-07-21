@@ -252,8 +252,9 @@ router.post('/ingest/remisiones', async (req, res) => {
       const result = await client.query(
         `INSERT INTO remisiones (
            card_code, card_name, doc_entry, line_num, doc_num, doc_date, doc_due_date,
-           item_code, descripcion, quantity, price, line_total, synced_at
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())
+           item_code, descripcion, quantity, price, line_total,
+           temperatura, antibiotico, canceled, synced_at
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW())
          ON CONFLICT (doc_entry, line_num)
          DO UPDATE SET
            card_code = EXCLUDED.card_code,
@@ -266,6 +267,9 @@ router.post('/ingest/remisiones', async (req, res) => {
            quantity = EXCLUDED.quantity,
            price = EXCLUDED.price,
            line_total = EXCLUDED.line_total,
+           temperatura = EXCLUDED.temperatura,
+           antibiotico = EXCLUDED.antibiotico,
+           canceled = EXCLUDED.canceled,
            synced_at = NOW()
          RETURNING (xmax = 0) AS is_insert`,
         [
@@ -281,6 +285,9 @@ router.post('/ingest/remisiones', async (req, res) => {
           rec.quantity ?? rec.Quantity ?? null,
           rec.price ?? rec.Price ?? null,
           rec.line_total ?? rec.LineTotal ?? null,
+          rec.temperatura ?? rec.U_TEMP ?? null,
+          rec.antibiotico ?? rec.U_ANTIB ?? null,
+          rec.canceled ?? rec.CANCELED ?? null,
         ]
       );
 

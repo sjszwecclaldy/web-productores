@@ -61,6 +61,11 @@ CREATE TABLE IF NOT EXISTS remisiones (
 CREATE INDEX IF NOT EXISTS idx_remisiones_card_date
   ON remisiones (card_code, doc_date DESC);
 
+-- Columnas provenientes de la vista REMCOMPLETO (reemplaza REMISION)
+ALTER TABLE remisiones ADD COLUMN IF NOT EXISTS temperatura NUMERIC;
+ALTER TABLE remisiones ADD COLUMN IF NOT EXISTS antibiotico TEXT;
+ALTER TABLE remisiones ADD COLUMN IF NOT EXISTS canceled TEXT;
+
 CREATE TABLE IF NOT EXISTS liquidaciones (
   id SERIAL PRIMARY KEY,
   card_code TEXT NOT NULL,

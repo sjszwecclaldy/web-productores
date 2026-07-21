@@ -48,13 +48,14 @@ $Domains = @(
     @{
         Name        = 'REMISION'
         DomainKey   = 'remisiones'
-        SapService  = 'REMISION'
+        SapService  = 'REMCOMPLETO'
         DateField   = 'DocDate'
         IngestPath  = '/internal/ingest/remisiones'
         SelectFields = @(
             'DocEntry', 'LineNum', 'DocNum', 'DocDate', 'DocDueDate',
             'CardCode', 'CardName', 'ItemCode', 'Dscription',
-            'Quantity', 'Price', 'LineTotal'
+            'Quantity', 'Price', 'LineTotal',
+            'CANCELED', 'U_TEMP', 'U_ANTIB'
         )
         Transform = {
             param($Row)
@@ -71,6 +72,9 @@ $Domains = @(
                 quantity     = $Row.Quantity
                 price        = $Row.Price
                 line_total   = $Row.LineTotal
+                temperatura  = $Row.U_TEMP
+                antibiotico  = $Row.U_ANTIB
+                canceled     = $Row.CANCELED
             }
         }
     },
