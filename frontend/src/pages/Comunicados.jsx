@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, clearToken, isAdmin } from '../api';
+import { api, API_URL, clearToken, getToken, isAdmin } from '../api';
 import { fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import LoadingScreen from '../components/LoadingScreen';
@@ -24,6 +24,7 @@ export default function Comunicados() {
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const fileRef = useRef(null);
 
   async function loadComunicados() {
     const path = admin ? '/api/admin/comunicados' : '/api/comunicados';
@@ -59,6 +60,7 @@ export default function Comunicados() {
   function openNew() {
     setEditId(null);
     setForm(emptyForm);
+    if (fileRef.current) fileRef.current.value = '';
     setShowForm(true);
   }
 
@@ -70,6 +72,7 @@ export default function Comunicados() {
       card_code: c.card_code || '',
       importante: !!c.importante,
     });
+    if (fileRef.current) fileRef.current.value = '';
     setShowForm(true);
   }
 
@@ -77,28 +80,38 @@ export default function Comunicados() {
     setShowForm(false);
     setEditId(null);
     setForm(emptyForm);
+    if (fileRef.current) fileRef.current.value = '';
   }
 
   async function saveForm(e) {
     e.preventDefault();
     setError('');
-    if (!form.titulo.trim() || !form.cuerpo.trim()) {
-      setError('El título y el mensaje son obligatorios.');
+    if (!form.titulo.trim()) {
+      setError('El título es obligatorio.');
+      return;
+    }
+    const file = fileRef.current?.files?.[0] || null;
+    if (!form.cuerpo.trim() && !file && !editId) {
+      setError('Agregá un mensaje o un archivo adjunto.');
       return;
     }
     setSaving(true);
     try {
-      const payload = {
-        titulo: form.titulo.trim(),
-        cuerpo: form.cuerpo.trim(),
-        card_code: form.card_code || null,
-        importante: form.importante,
-      };
-      if (editId) {
-        await api(`/api/admin/comunicados/${editId}`, { method: 'PUT', body: JSON.stringify(payload) });
-      } else {
-        await api('/api/admin/comunicados', { method: 'POST', body: JSON.stringify(payload) });
-      }
+      const fd = new FormData();
+      fd.append('titulo', form.titulo.trim());
+      fd.append('cuerpo', form.cuerpo || '');
+      fd.append('card_code', form.card_code || '');
+      fd.append('importante', form.importante ? 'true' : 'false');
+      if (file) fd.append('archivo', file);
+
+      const url = `${API_URL}/api/admin/comunicados${editId ? `/${editId}` : ''}`;
+      const res = await fetch(url, {
+        method: editId ? 'PUT' : 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Error al guardar el comunicado');
       cancelForm();
       await loadComunicados();
     } catch (err) {
@@ -114,6 +127,27 @@ export default function Comunicados() {
     try {
       await api(`/api/admin/comunicados/${id}`, { method: 'DELETE' });
       await loadComunicados();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function descargar(c) {
+    setError('');
+    try {
+      const res = await fetch(`${API_URL}/api/comunicados/${c.id}/archivo`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) throw new Error('No se pudo descargar el archivo');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = c.archivo_nombre || 'comunicado';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch (err) {
       setError(err.message);
     }
@@ -176,10 +210,15 @@ export default function Comunicados() {
               </div>
             </div>
             <div className="form-group">
-              <label htmlFor="c-cuerpo">Mensaje</label>
+              <label htmlFor="c-archivo">Archivo adjunto (Word o PDF)</label>
+              <input id="c-archivo" type="file" ref={fileRef} accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+              {editId && <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: 'var(--muted)' }}>Si no elegís un archivo, se mantiene el actual.</p>}
+            </div>
+            <div className="form-group">
+              <label htmlFor="c-cuerpo">Mensaje (opcional)</label>
               <textarea
                 id="c-cuerpo"
-                rows={4}
+                rows={3}
                 value={form.cuerpo}
                 onChange={update('cuerpo')}
                 ref={(el) => {
@@ -222,7 +261,14 @@ export default function Comunicados() {
                       ? ' · Dirigido a vos'
                       : ''}
                 </p>
-                <p className="comunicado-card__body">{c.cuerpo}</p>
+                {c.cuerpo && <p className="comunicado-card__body">{c.cuerpo}</p>}
+                {c.tiene_archivo && (
+                  <div style={{ marginTop: '0.6rem' }}>
+                    <button type="button" className="btn btn-ghost" style={{ width: 'auto' }} onClick={() => descargar(c)}>
+                      📎 Descargar {c.archivo_nombre || 'archivo'}
+                    </button>
+                  </div>
+                )}
                 {admin && (
                   <div className="comunicado-card__actions">
                     <button type="button" className="btn btn-ghost" style={{ width: 'auto', padding: '0.25rem 0.6rem' }} onClick={() => openEdit(c)}>

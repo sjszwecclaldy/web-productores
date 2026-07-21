@@ -8,21 +8,29 @@ import {
   rowsOnMonth,
   toggleSelectedMonth,
 } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate, isCurrentMonth } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
+import ExportButton from '../components/ExportButton';
 import LoadingScreen from '../components/LoadingScreen';
 import MonthlyBarChart from '../components/MonthlyBarChart';
 import PeriodFilter from '../components/PeriodFilter';
 import { SelectedMonthBanner } from '../components/SelectedDateBanner';
 
+const EXPORT_COLS = [
+  { header: 'Fecha', value: (r) => fmtDate(r.doc_date) },
+  { header: 'Documento', value: (r) => r.doc_num },
+  { header: 'Concepto', value: (r) => r.descripcion || '' },
+  { header: 'Importe', value: (r) => r.line_total },
+];
+
 export default function Reliquidaciones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
+  const [activePreset, setActivePreset] = useState(365);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activePreset, setActivePreset] = useState(365);
   const [from, setFrom] = useState(() => apiFromDate(365));
   const [to, setTo] = useState('');
 
@@ -78,17 +86,22 @@ export default function Reliquidaciones() {
     [registros, selectedMonth]
   );
 
-  const tablaRegistros = useMemo(
-    () => (selectedMonth ? selectedRows : registros),
-    [registros, selectedRows, selectedMonth]
-  );
-
   const totales = useMemo(() => {
     const src = selectedMonth ? selectedRows : registros;
     return {
       total_importe: src.reduce((sum, row) => sum + (Number(row.line_total) || 0), 0),
       reliquidaciones: src.length,
     };
+  }, [selectedMonth, selectedRows, registros]);
+
+  const mesCorriente = useMemo(
+    () => registros.filter((r) => isCurrentMonth(r.doc_date)),
+    [registros]
+  );
+
+  const historico = useMemo(() => {
+    const base = selectedMonth ? selectedRows : registros;
+    return base.filter((r) => !isCurrentMonth(r.doc_date));
   }, [selectedMonth, selectedRows, registros]);
 
   function handleMonthSelect(month) {
@@ -158,8 +171,42 @@ export default function Reliquidaciones() {
           />
         </ChartPanel>
 
+        {mesCorriente.length > 0 && (
+          <>
+            <h3 className="section-title">Mes corriente — pendiente de validación</h3>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Documento</th>
+                    <th>Concepto</th>
+                    <th className="num">Importe</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mesCorriente.map((r, i) => (
+                    <tr key={`mc-${r.doc_num}-${i}`}>
+                      <td>{fmtDate(r.doc_date)}</td>
+                      <td>{r.doc_num}</td>
+                      <td>{r.descripcion || ''}</td>
+                      <td className="num">{fmt(r.line_total)}</td>
+                      <td><span className="badge badge--pendiente">Pendiente de validación</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        <div className="table-toolbar">
+          <h3 className="section-title" style={{ margin: 0 }}>Histórico</h3>
+          <ExportButton filename="reliquidaciones.xlsx" columns={EXPORT_COLS} rows={registros} />
+        </div>
         <div className="table-wrap">
-          {tablaRegistros.length === 0 ? (
+          {historico.length === 0 ? (
             <div className="empty-state">
               {selectedMonth
                 ? 'No hay reliquidaciones para el mes seleccionado.'
@@ -176,7 +223,7 @@ export default function Reliquidaciones() {
                 </tr>
               </thead>
               <tbody>
-                {tablaRegistros.map((r, i) => (
+                {historico.map((r, i) => (
                   <tr key={`${r.doc_num}-${i}`}>
                     <td>{fmtDate(r.doc_date)}</td>
                     <td>{r.doc_num}</td>

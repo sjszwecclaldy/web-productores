@@ -159,3 +159,8 @@ CREATE TABLE IF NOT EXISTS comunicados (
 
 CREATE INDEX IF NOT EXISTS idx_comunicados_card ON comunicados (card_code);
 CREATE INDEX IF NOT EXISTS idx_comunicados_created ON comunicados (created_at DESC);
+
+ALTER TABLE comunicados ADD COLUMN IF NOT EXISTS archivo BYTEA;
+ALTER TABLE comunicados ADD COLUMN IF NOT EXISTS archivo_nombre TEXT;
+ALTER TABLE comunicados ADD COLUMN IF NOT EXISTS archivo_tipo TEXT;
+ALTER TABLE comunicados ALTER COLUMN cuerpo DROP NOT NULL;

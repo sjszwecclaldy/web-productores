@@ -7,10 +7,11 @@ import {
   rowsOnDate,
   toggleSelectedDate,
 } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate, isCurrentMonth } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
+import ExportButton from '../components/ExportButton';
 import LoadingScreen from '../components/LoadingScreen';
 import PeriodFilter from '../components/PeriodFilter';
 import QualityGauge from '../components/QualityGauge';
@@ -24,6 +25,17 @@ const METRICS = [
   { key: 'fpd', label: 'Punto congelación' },
   { key: 'casein', label: 'Caseína %' },
   { key: 'urea', label: 'Urea' },
+];
+
+const EXPORT_COLS = [
+  { header: 'Fecha', value: (r) => fmtDate(r.collection_date) },
+  { header: 'Grasa', value: (r) => r.fat },
+  { header: 'Proteína', value: (r) => r.protein },
+  { header: 'Lactosa', value: (r) => r.lactose },
+  { header: 'Sólidos totales', value: (r) => r.ts },
+  { header: 'Punto congelación', value: (r) => r.fpd },
+  { header: 'Caseína', value: (r) => r.casein },
+  { header: 'Urea', value: (r) => r.urea },
 ];
 
 function ResumenCard({ title, data }) {
@@ -42,7 +54,6 @@ function ResumenCard({ title, data }) {
       {data.collection_date && (
         <p style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: 'var(--muted)' }}>
           Fecha: {fmtDate(data.collection_date)}
-          {data.sub != null && ` · Muestra ${data.sub}`}
         </p>
       )}
       {METRICS.map(({ key, label }) => (
@@ -55,13 +66,28 @@ function ResumenCard({ title, data }) {
   );
 }
 
+function CompoRow({ r }) {
+  return (
+    <>
+      <td>{fmtDate(r.collection_date)}</td>
+      <td className="num">{fmt(r.fat)}</td>
+      <td className="num">{fmt(r.protein)}</td>
+      <td className="num">{fmt(r.lactose)}</td>
+      <td className="num">{fmt(r.ts)}</td>
+      <td className="num">{fmt(r.fpd)}</td>
+      <td className="num">{fmt(r.casein)}</td>
+      <td className="num">{fmt(r.urea)}</td>
+    </>
+  );
+}
+
 export default function Composicion() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
+  const [activePreset, setActivePreset] = useState(30);
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activePreset, setActivePreset] = useState(30);
   const [from, setFrom] = useState(() => apiFromDate(30));
   const [to, setTo] = useState('');
 
@@ -118,6 +144,16 @@ export default function Composicion() {
 
   const promedioPeriodo = useMemo(() => avgCalidadSnapshot(registros), [registros]);
 
+  const mesCorriente = useMemo(
+    () => registros.filter((r) => isCurrentMonth(r.collection_date)),
+    [registros]
+  );
+
+  const historico = useMemo(() => {
+    const base = selectedDate ? selectedRows : registros;
+    return base.filter((r) => !isCurrentMonth(r.collection_date));
+  }, [selectedDate, selectedRows, registros]);
+
   function handleDateSelect(date) {
     setSelectedDate((current) => toggleSelectedDate(current, date));
   }
@@ -169,15 +205,49 @@ export default function Composicion() {
           </ChartPanel>
         </div>
 
+        {mesCorriente.length > 0 && (
+          <>
+            <h3 className="section-title">Mes corriente — pendiente de validación</h3>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th className="num">Grasa</th>
+                    <th className="num">Proteína</th>
+                    <th className="num">Lactosa</th>
+                    <th className="num">ST</th>
+                    <th className="num">FPD</th>
+                    <th className="num">Caseína</th>
+                    <th className="num">Urea</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mesCorriente.map((r, i) => (
+                    <tr key={`mc-${r.collection_date}-${i}`}>
+                      <CompoRow r={r} />
+                      <td><span className="badge badge--pendiente">Pendiente de validación</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        <div className="table-toolbar">
+          <h3 className="section-title" style={{ margin: 0 }}>Histórico</h3>
+          <ExportButton filename="composicion.xlsx" columns={EXPORT_COLS} rows={registros} />
+        </div>
         <div className="table-wrap">
-          {registros.length === 0 ? (
+          {historico.length === 0 ? (
             <div className="empty-state">No hay registros para el período seleccionado.</div>
           ) : (
             <table>
               <thead>
                 <tr>
                   <th>Fecha</th>
-                  <th>Sub</th>
                   <th className="num">Grasa</th>
                   <th className="num">Proteína</th>
                   <th className="num">Lactosa</th>
@@ -185,22 +255,12 @@ export default function Composicion() {
                   <th className="num">FPD</th>
                   <th className="num">Caseína</th>
                   <th className="num">Urea</th>
-                  <th>Obs.</th>
                 </tr>
               </thead>
               <tbody>
-                {(selectedDate ? selectedRows : registros).map((r, i) => (
-                  <tr key={`${r.collection_date}-${r.sub}-${i}`}>
-                    <td>{fmtDate(r.collection_date)}</td>
-                    <td>{r.sub}</td>
-                    <td className="num">{fmt(r.fat)}</td>
-                    <td className="num">{fmt(r.protein)}</td>
-                    <td className="num">{fmt(r.lactose)}</td>
-                    <td className="num">{fmt(r.ts)}</td>
-                    <td className="num">{fmt(r.fpd)}</td>
-                    <td className="num">{fmt(r.casein)}</td>
-                    <td className="num">{fmt(r.urea)}</td>
-                    <td>{r.remarks || ''}</td>
+                {historico.map((r, i) => (
+                  <tr key={`${r.collection_date}-${i}`}>
+                    <CompoRow r={r} />
                   </tr>
                 ))}
               </tbody>

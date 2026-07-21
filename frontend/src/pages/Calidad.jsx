@@ -2,21 +2,28 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import { CHART_COLORS, formatChartDate } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate, isCurrentMonth } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
+import ExportButton from '../components/ExportButton';
 import KpiCard from '../components/KpiCard';
 import LoadingScreen from '../components/LoadingScreen';
 import PeriodFilter from '../components/PeriodFilter';
 import QualityGauge from '../components/QualityGauge';
 
+const EXPORT_COLS = [
+  { header: 'Fecha', value: (r) => fmtDate(r.lab_date) },
+  { header: 'Células somáticas', value: (r) => r.celulas },
+  { header: 'Recuento bacteriano', value: (r) => r.bacterias },
+];
+
 export default function Calidad() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
+  const [activePreset, setActivePreset] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activePreset, setActivePreset] = useState(30);
   const [from, setFrom] = useState(() => apiFromDate(30));
   const [to, setTo] = useState('');
 
@@ -83,6 +90,16 @@ export default function Calidad() {
     return { celulas: avg(cel), bacterias: avg(bac) };
   }, [registros]);
 
+  const mesCorriente = useMemo(
+    () => registros.filter((r) => isCurrentMonth(r.lab_date)),
+    [registros]
+  );
+
+  const historico = useMemo(
+    () => registros.filter((r) => !isCurrentMonth(r.lab_date)),
+    [registros]
+  );
+
   if (loading) {
     return <LoadingScreen />;
   }
@@ -135,8 +152,40 @@ export default function Calidad() {
           </ChartPanel>
         </div>
 
+        {mesCorriente.length > 0 && (
+          <>
+            <h3 className="section-title">Mes corriente — pendiente de validación</h3>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th className="num">Células somáticas</th>
+                    <th className="num">Recuento bacteriano</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mesCorriente.map((r, i) => (
+                    <tr key={`mc-${r.lab_date}-${i}`}>
+                      <td>{fmtDate(r.lab_date)}</td>
+                      <td className="num">{fmt(r.celulas)}</td>
+                      <td className="num">{fmt(r.bacterias)}</td>
+                      <td><span className="badge badge--pendiente">Pendiente de validación</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        <div className="table-toolbar">
+          <h3 className="section-title" style={{ margin: 0 }}>Histórico</h3>
+          <ExportButton filename="calidad.xlsx" columns={EXPORT_COLS} rows={registros} />
+        </div>
         <div className="table-wrap">
-          {registros.length === 0 ? (
+          {historico.length === 0 ? (
             <div className="empty-state">No hay registros para el período seleccionado.</div>
           ) : (
             <table>
@@ -148,7 +197,7 @@ export default function Calidad() {
                 </tr>
               </thead>
               <tbody>
-                {registros.map((r, i) => (
+                {historico.map((r, i) => (
                   <tr key={`${r.lab_date}-${i}`}>
                     <td>{fmtDate(r.lab_date)}</td>
                     <td className="num">{fmt(r.celulas)}</td>

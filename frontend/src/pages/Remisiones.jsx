@@ -8,9 +8,10 @@ import {
   rowsOnDate,
   toggleSelectedDate,
 } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate, isCurrentMonth } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
+import ExportButton from '../components/ExportButton';
 import LitrosBarChart from '../components/LitrosBarChart';
 import LitrosLineChart from '../components/LitrosLineChart';
 import YearCompareLineChart from '../components/YearCompareLineChart';
@@ -18,14 +19,20 @@ import LoadingScreen from '../components/LoadingScreen';
 import PeriodFilter from '../components/PeriodFilter';
 import SelectedDateBanner from '../components/SelectedDateBanner';
 
+const EXPORT_COLS = [
+  { header: 'Fecha', value: (r) => fmtDate(r.doc_date) },
+  { header: 'Remito', value: (r) => r.doc_num },
+  { header: 'Litros', value: (r) => r.quantity },
+];
+
 export default function Remisiones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
   const [allRegistros, setAllRegistros] = useState([]);
+  const [activePreset, setActivePreset] = useState(30);
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activePreset, setActivePreset] = useState(30);
   const [from, setFrom] = useState(() => apiFromDate(30));
   const [to, setTo] = useState('');
 
@@ -107,7 +114,15 @@ export default function Remisiones() {
     };
   }, [selectedDate, selectedRemisiones, registros]);
 
-  const tablaRegistros = selectedDate ? selectedRemisiones : registros;
+  const mesCorriente = useMemo(
+    () => registros.filter((r) => isCurrentMonth(r.doc_date)),
+    [registros]
+  );
+
+  const historico = useMemo(() => {
+    const base = selectedDate ? selectedRemisiones : registros;
+    return base.filter((r) => !isCurrentMonth(r.doc_date));
+  }, [selectedDate, selectedRemisiones, registros]);
 
   function handleDateSelect(date) {
     setSelectedDate((current) => toggleSelectedDate(current, date));
@@ -174,8 +189,40 @@ export default function Remisiones() {
           <YearCompareLineChart data={yearCompare.data} years={yearCompare.years} />
         </ChartPanel>
 
+        {mesCorriente.length > 0 && (
+          <>
+            <h3 className="section-title">Mes corriente — pendiente de validación</h3>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Remito</th>
+                    <th className="num">Litros</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mesCorriente.map((r, i) => (
+                    <tr key={`mc-${r.doc_num}-${i}`}>
+                      <td>{fmtDate(r.doc_date)}</td>
+                      <td>{r.doc_num}</td>
+                      <td className="num">{fmt(r.quantity)}</td>
+                      <td><span className="badge badge--pendiente">Pendiente de validación</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        <div className="table-toolbar">
+          <h3 className="section-title" style={{ margin: 0 }}>Histórico</h3>
+          <ExportButton filename="remisiones.xlsx" columns={EXPORT_COLS} rows={registros} />
+        </div>
         <div className="table-wrap">
-          {tablaRegistros.length === 0 ? (
+          {historico.length === 0 ? (
             <div className="empty-state">
               {selectedDate
                 ? 'No hay remitos para el dia seleccionado.'
@@ -191,7 +238,7 @@ export default function Remisiones() {
                 </tr>
               </thead>
               <tbody>
-                {tablaRegistros.map((r, i) => (
+                {historico.map((r, i) => (
                   <tr key={`${r.doc_num}-${i}`}>
                     <td>{fmtDate(r.doc_date)}</td>
                     <td>{r.doc_num}</td>

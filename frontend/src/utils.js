@@ -37,4 +37,20 @@ function buildQueryFrom(userFrom) {
   return from;
 }
 
-export { DATA_FROM_DATE, fmt, fmtDate, filterFromMinDate, apiFromDate, buildQueryFrom };
+function currentMonthPrefix() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function isCurrentMonth(dateStr) {
+  return !!dateStr && String(dateStr).slice(0, 7) === currentMonthPrefix();
+}
+
+export {
+  DATA_FROM_DATE,
+  fmt,
+  fmtDate,
+  filterFromMinDate,
+  apiFromDate,
+  buildQueryFrom,
+  isCurrentMonth,
+};

@@ -1171,3 +1171,17 @@ th.sortable.sorted {
   background: #fbe7c2;
   color: #7a5a12;
 }
+
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.badge--pendiente {
+  background: #fdecc8;
+  color: #8a5a00;
+}

@@ -1,8 +1,15 @@
 const express = require('express');
+const multer = require('multer');
 const { query } = require('../db');
 const { requireJwt, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Subida en memoria para adjuntos de comunicados (Word/PDF), guardados como BYTEA. Tope 10 MB.
+const uploadComunicado = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 router.use(requireJwt);
 router.use(requireAdmin);
@@ -267,6 +274,7 @@ router.get('/comunicados', async (_req, res) => {
   try {
     const { rows } = await query(
       `SELECT c.id, c.card_code, p.card_name, c.titulo, c.cuerpo, c.importante,
+              c.archivo_nombre, (c.archivo IS NOT NULL) AS tiene_archivo,
               to_char(c.created_at, 'YYYY-MM-DD') AS fecha
        FROM comunicados c
        LEFT JOIN productores p ON p.card_code = c.card_code
@@ -279,21 +287,40 @@ router.get('/comunicados', async (_req, res) => {
   }
 });
 
-router.post('/comunicados', async (req, res) => {
+function toBool(v) {
+  return v === true || v === 'true' || v === '1';
+}
+
+router.post('/comunicados', uploadComunicado.single('archivo'), async (req, res) => {
   const { card_code, titulo, cuerpo, importante } = req.body;
 
-  if (!titulo || !cuerpo) {
-    return res.status(400).json({ error: 'Faltan titulo o cuerpo' });
+  if (!titulo || !String(titulo).trim()) {
+    return res.status(400).json({ error: 'Falta el título' });
   }
 
   const target = card_code ? String(card_code).trim() : null;
+  const cuerpoVal = cuerpo && String(cuerpo).trim() ? String(cuerpo).trim() : null;
+  const file = req.file;
+
+  if (!cuerpoVal && !file) {
+    return res.status(400).json({ error: 'Agregá un mensaje o un archivo adjunto' });
+  }
 
   try {
     const { rows } = await query(
-      `INSERT INTO comunicados (card_code, titulo, cuerpo, importante)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO comunicados
+         (card_code, titulo, cuerpo, importante, archivo, archivo_nombre, archivo_tipo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id`,
-      [target, String(titulo).trim(), String(cuerpo).trim(), Boolean(importante)]
+      [
+        target,
+        String(titulo).trim(),
+        cuerpoVal,
+        toBool(importante),
+        file ? file.buffer : null,
+        file ? file.originalname : null,
+        file ? file.mimetype : null,
+      ]
     );
     res.json({ ok: true, id: rows[0].id });
   } catch (err) {
@@ -302,25 +329,38 @@ router.post('/comunicados', async (req, res) => {
   }
 });
 
-router.put('/comunicados/:id', async (req, res) => {
+router.put('/comunicados/:id', uploadComunicado.single('archivo'), async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isInteger(id)) {
     return res.status(400).json({ error: 'id inválido' });
   }
   const { card_code, titulo, cuerpo, importante } = req.body;
-  if (!titulo || !cuerpo) {
-    return res.status(400).json({ error: 'Faltan titulo o cuerpo' });
+  if (!titulo || !String(titulo).trim()) {
+    return res.status(400).json({ error: 'Falta el título' });
   }
   const target = card_code ? String(card_code).trim() : null;
+  const cuerpoVal = cuerpo && String(cuerpo).trim() ? String(cuerpo).trim() : null;
+  const file = req.file;
 
   try {
-    const { rowCount } = await query(
-      `UPDATE comunicados
-       SET card_code = $2, titulo = $3, cuerpo = $4, importante = $5, updated_at = NOW()
-       WHERE id = $1`,
-      [id, target, String(titulo).trim(), String(cuerpo).trim(), Boolean(importante)]
-    );
-    if (rowCount === 0) {
+    let result;
+    if (file) {
+      result = await query(
+        `UPDATE comunicados
+         SET card_code = $2, titulo = $3, cuerpo = $4, importante = $5,
+             archivo = $6, archivo_nombre = $7, archivo_tipo = $8, updated_at = NOW()
+         WHERE id = $1`,
+        [id, target, String(titulo).trim(), cuerpoVal, toBool(importante), file.buffer, file.originalname, file.mimetype]
+      );
+    } else {
+      result = await query(
+        `UPDATE comunicados
+         SET card_code = $2, titulo = $3, cuerpo = $4, importante = $5, updated_at = NOW()
+         WHERE id = $1`,
+        [id, target, String(titulo).trim(), cuerpoVal, toBool(importante)]
+      );
+    }
+    if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Comunicado no encontrado' });
     }
     res.json({ ok: true });

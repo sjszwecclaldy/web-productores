@@ -7,21 +7,48 @@ import {
   rowsOnMonth,
   toggleSelectedMonth,
 } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate, isCurrentMonth } from '../utils';
 import AppHeader from '../components/AppHeader';
 import ChartPanel from '../components/ChartPanel';
+import ExportButton from '../components/ExportButton';
 import LoadingScreen from '../components/LoadingScreen';
 import MonthlyBarChart from '../components/MonthlyBarChart';
 import PeriodFilter from '../components/PeriodFilter';
 import { SelectedMonthBanner } from '../components/SelectedDateBanner';
 
+const EXPORT_COLS = [
+  { header: 'Fecha', value: (r) => fmtDate(r.doc_date) },
+  { header: 'Referencia', value: (r) => r.num_at_card },
+  { header: 'Litros', value: (r) => r.cantidad },
+  { header: 'Total', value: (r) => r.total },
+  { header: 'IMEBA', value: (r) => r.imeba },
+  { header: 'INIA', value: (r) => r.inia },
+  { header: 'Aftosa (USD)', value: (r) => r.aftosa_usd },
+  { header: 'Enferm. (USD)', value: (r) => r.enferm_usd },
+];
+
+function LiqRow({ r }) {
+  return (
+    <>
+      <td>{fmtDate(r.doc_date)}</td>
+      <td>{r.num_at_card}</td>
+      <td className="num">{fmt(r.cantidad)}</td>
+      <td className="num">{fmt(r.total)}</td>
+      <td className="num">{fmt(r.imeba)}</td>
+      <td className="num">{fmt(r.inia)}</td>
+      <td className="num">{fmt(r.aftosa_usd)}</td>
+      <td className="num">{fmt(r.enferm_usd)}</td>
+    </>
+  );
+}
+
 export default function Liquidaciones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
+  const [activePreset, setActivePreset] = useState(365);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activePreset, setActivePreset] = useState(365);
   const [from, setFrom] = useState(() => apiFromDate(365));
   const [to, setTo] = useState('');
 
@@ -77,10 +104,15 @@ export default function Liquidaciones() {
     [registros, selectedMonth]
   );
 
-  const tablaRegistros = useMemo(
-    () => (selectedMonth ? selectedRows : registros),
-    [registros, selectedRows, selectedMonth]
+  const mesCorriente = useMemo(
+    () => registros.filter((r) => isCurrentMonth(r.doc_date)),
+    [registros]
   );
+
+  const historico = useMemo(() => {
+    const base = selectedMonth ? selectedRows : registros;
+    return base.filter((r) => !isCurrentMonth(r.doc_date));
+  }, [selectedMonth, selectedRows, registros]);
 
   function handleMonthSelect(month) {
     setSelectedMonth((current) => toggleSelectedMonth(current, month));
@@ -139,8 +171,43 @@ export default function Liquidaciones() {
           />
         </ChartPanel>
 
+        {mesCorriente.length > 0 && (
+          <>
+            <h3 className="section-title">Mes corriente — pendiente de validación</h3>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Referencia</th>
+                    <th className="num">Litros</th>
+                    <th className="num">Total</th>
+                    <th className="num">IMEBA</th>
+                    <th className="num">INIA</th>
+                    <th className="num">Aftosa (USD)</th>
+                    <th className="num">Enferm. (USD)</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mesCorriente.map((r, i) => (
+                    <tr key={`mc-${r.num_at_card}-${r.doc_date}-${i}`}>
+                      <LiqRow r={r} />
+                      <td><span className="badge badge--pendiente">Pendiente de validación</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        <div className="table-toolbar">
+          <h3 className="section-title" style={{ margin: 0 }}>Histórico</h3>
+          <ExportButton filename="liquidaciones.xlsx" columns={EXPORT_COLS} rows={registros} />
+        </div>
         <div className="table-wrap">
-          {tablaRegistros.length === 0 ? (
+          {historico.length === 0 ? (
             <div className="empty-state">
               {selectedMonth
                 ? 'No hay liquidaciones para el mes seleccionado.'
@@ -161,16 +228,9 @@ export default function Liquidaciones() {
                 </tr>
               </thead>
               <tbody>
-                {tablaRegistros.map((r, i) => (
+                {historico.map((r, i) => (
                   <tr key={`${r.num_at_card}-${r.doc_date}-${i}`}>
-                    <td>{fmtDate(r.doc_date)}</td>
-                    <td>{r.num_at_card}</td>
-                    <td className="num">{fmt(r.cantidad)}</td>
-                    <td className="num">{fmt(r.total)}</td>
-                    <td className="num">{fmt(r.imeba)}</td>
-                    <td className="num">{fmt(r.inia)}</td>
-                    <td className="num">{fmt(r.aftosa_usd)}</td>
-                    <td className="num">{fmt(r.enferm_usd)}</td>
+                    <LiqRow r={r} />
                   </tr>
                 ))}
               </tbody>
