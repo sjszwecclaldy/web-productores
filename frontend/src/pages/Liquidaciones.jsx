@@ -123,6 +123,10 @@ export default function Liquidaciones() {
   }
 
   const ultima = selectedMonth ? selectedRows[0] || null : registros[0] || null;
+  const n = (v) => Number(v) || 0;
+  const importeNeto = ultima
+    ? n(ultima.total) - n(ultima.imeba) - n(ultima.inia) - n(ultima.aftosa_usd) - n(ultima.enferm_usd)
+    : null;
 
   return (
     <div className="layout">
@@ -150,11 +154,12 @@ export default function Liquidaciones() {
                   {ultima.num_at_card && ` · Ref. ${ultima.num_at_card}`}
                 </p>
                 <div className="stat-row"><span>Litros</span><span className="value">{fmt(ultima.cantidad)}</span></div>
-                <div className="stat-row"><span>Importe total</span><span className="value">{fmt(ultima.total)}</span></div>
+                <div className="stat-row"><span>Importe total bruto</span><span className="value">{fmt(ultima.total)}</span></div>
                 <div className="stat-row"><span>IMEBA</span><span className="value">{fmt(ultima.imeba)}</span></div>
                 <div className="stat-row"><span>INIA</span><span className="value">{fmt(ultima.inia)}</span></div>
                 <div className="stat-row"><span>Aftosa (USD)</span><span className="value">{fmt(ultima.aftosa_usd)}</span></div>
                 <div className="stat-row"><span>Enfermedades (USD)</span><span className="value">{fmt(ultima.enferm_usd)}</span></div>
+                <div className="stat-row"><span>Importe neto</span><span className="value">{fmt(importeNeto)}</span></div>
               </>
             ) : (
               <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
