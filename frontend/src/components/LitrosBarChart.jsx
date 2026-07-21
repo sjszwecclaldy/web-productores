@@ -11,7 +11,7 @@ import {
 import { useContext } from 'react';
 import { CHART_COLORS } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
-import { fmt } from '../utils';
+import { fmt, fmtDate } from '../utils';
 
 function isSameChartDate(a, b) {
   if (!a || !b) return false;
@@ -54,7 +54,7 @@ export default function LitrosBarChart({
         <YAxis tick={{ fontSize: 11, fill: '#5a6d62' }} width={48} />
         <Tooltip
           formatter={(value) => [`${fmt(value)} L`, 'Litros']}
-          labelFormatter={(label) => label}
+          labelFormatter={(l, p) => (p && p[0] && p[0].payload.date ? fmtDate(p[0].payload.date) : l)}
           contentStyle={{ borderRadius: 8, border: '1px solid #ccddd4' }}
         />
         <Bar dataKey="total" radius={[4, 4, 0, 0]} maxBarSize={48}>

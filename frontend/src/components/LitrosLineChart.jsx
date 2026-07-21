@@ -8,9 +8,9 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { CHART_COLORS } from '../chartUtils';
+import { CHART_COLORS, formatMonthYear } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
-import { fmt } from '../utils';
+import { fmt, fmtDate } from '../utils';
 
 // Línea de litros (serie única). Sirve para muchos puntos diarios (dots=false, año corriente)
 // o para pocos puntos mensuales (dots=true). Selección opcional al hacer clic (por día).
@@ -54,7 +54,12 @@ export default function LitrosLineChart({
         <YAxis tick={{ fontSize: 11, fill: '#5a6d62' }} width={52} />
         <Tooltip
           formatter={(v) => [`${fmt(v)} L`, 'Litros']}
-          labelFormatter={(l) => l}
+          labelFormatter={(l, p) => {
+            const d = p && p[0] && p[0].payload;
+            if (d && d.date) return fmtDate(d.date);
+            if (d && d.month) return formatMonthYear(d.month);
+            return l;
+          }}
           contentStyle={{ borderRadius: 8, border: '1px solid #ccddd4' }}
         />
         <Line

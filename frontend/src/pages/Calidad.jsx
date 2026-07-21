@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { CHART_COLORS, formatChartDate } from '../chartUtils';
+import { avgByYearMonth, CHART_COLORS, formatChartDate } from '../chartUtils';
 import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate, isCurrentMonth } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
@@ -11,6 +11,7 @@ import KpiCard from '../components/KpiCard';
 import LoadingScreen from '../components/LoadingScreen';
 import PeriodFilter from '../components/PeriodFilter';
 import QualityGauge from '../components/QualityGauge';
+import YearCompareLineChart from '../components/YearCompareLineChart';
 
 const EXPORT_COLS = [
   { header: 'Fecha', value: (r) => fmtDate(r.lab_date) },
@@ -21,6 +22,7 @@ const EXPORT_COLS = [
 export default function Calidad() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
+  const [allRegistros, setAllRegistros] = useState([]);
   const [activePreset, setActivePreset] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -35,10 +37,15 @@ export default function Calidad() {
     setRegistros(filterFromMinDate(data.data, 'lab_date'));
   }
 
+  async function loadYearData() {
+    const data = await api(`/api/calidad-sanitaria?from=${DATA_FROM_DATE}`);
+    setAllRegistros(filterFromMinDate(data.data, 'lab_date'));
+  }
+
   useEffect(() => {
     async function init() {
       try {
-        await loadRegistros();
+        await Promise.all([loadRegistros(), loadYearData()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -89,6 +96,9 @@ export default function Calidad() {
     const bac = registros.filter((r) => r.bacterias != null).map((r) => Number(r.bacterias));
     return { celulas: avg(cel), bacterias: avg(bac) };
   }, [registros]);
+
+  const yearCelulas = useMemo(() => avgByYearMonth(allRegistros, 'lab_date', 'celulas'), [allRegistros]);
+  const yearBacterias = useMemo(() => avgByYearMonth(allRegistros, 'lab_date', 'bacterias'), [allRegistros]);
 
   const mesCorriente = useMemo(
     () => registros.filter((r) => isCurrentMonth(r.lab_date)),
@@ -149,6 +159,15 @@ export default function Calidad() {
               data={serie}
               series={[{ key: 'bacterias', label: 'Recuento bact.', color: CHART_COLORS.accent }]}
             />
+          </ChartPanel>
+        </div>
+
+        <div className="charts-grid">
+          <ChartPanel title="Células somáticas — comparación de años">
+            <YearCompareLineChart data={yearCelulas.data} years={yearCelulas.years} />
+          </ChartPanel>
+          <ChartPanel title="Recuento bacteriano — comparación de años">
+            <YearCompareLineChart data={yearBacterias.data} years={yearBacterias.years} />
           </ChartPanel>
         </div>
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import {
+  avgByYearMonth,
   avgCalidadByDate,
   avgCalidadSnapshot,
   rowsOnDate,
@@ -16,6 +17,7 @@ import LoadingScreen from '../components/LoadingScreen';
 import PeriodFilter from '../components/PeriodFilter';
 import QualityGauge from '../components/QualityGauge';
 import SelectedDateBanner from '../components/SelectedDateBanner';
+import YearCompareLineChart from '../components/YearCompareLineChart';
 
 const METRICS = [
   { key: 'fat', label: 'Grasa %' },
@@ -84,6 +86,7 @@ function CompoRow({ r }) {
 export default function Composicion() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
+  const [allRegistros, setAllRegistros] = useState([]);
   const [activePreset, setActivePreset] = useState(30);
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -99,10 +102,15 @@ export default function Composicion() {
     setRegistros(filterFromMinDate(data.data, 'collection_date'));
   }
 
+  async function loadYearData() {
+    const data = await api(`/api/calidad-composicion?from=${DATA_FROM_DATE}`);
+    setAllRegistros(filterFromMinDate(data.data, 'collection_date'));
+  }
+
   useEffect(() => {
     async function init() {
       try {
-        await loadRegistros();
+        await Promise.all([loadRegistros(), loadYearData()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -143,6 +151,9 @@ export default function Composicion() {
   const ultimo = selectedDate ? avgCalidadSnapshot(selectedRows) : registros[0] || null;
 
   const promedioPeriodo = useMemo(() => avgCalidadSnapshot(registros), [registros]);
+
+  const yearGrasa = useMemo(() => avgByYearMonth(allRegistros, 'collection_date', 'fat'), [allRegistros]);
+  const yearProteina = useMemo(() => avgByYearMonth(allRegistros, 'collection_date', 'protein'), [allRegistros]);
 
   const mesCorriente = useMemo(
     () => registros.filter((r) => isCurrentMonth(r.collection_date)),
@@ -202,6 +213,15 @@ export default function Composicion() {
               <QualityGauge label="Lactosa" value={ultimo?.lactose} max={6} />
               <QualityGauge label="Solidos totales" value={ultimo?.ts} max={14} />
             </div>
+          </ChartPanel>
+        </div>
+
+        <div className="charts-grid">
+          <ChartPanel title="Grasa — comparación de años">
+            <YearCompareLineChart data={yearGrasa.data} years={yearGrasa.years} />
+          </ChartPanel>
+          <ChartPanel title="Proteína — comparación de años">
+            <YearCompareLineChart data={yearProteina.data} years={yearProteina.years} />
           </ChartPanel>
         </div>
 

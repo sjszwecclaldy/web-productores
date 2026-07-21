@@ -25,13 +25,15 @@ function MetricCard({ icon, name, ultima, promedio }) {
         <span className="metric-card__icon">{icon}</span>
         <span className="metric-card__name">{name}</span>
       </div>
-      <div className="metric-card__row">
-        <span>Última entrega</span>
-        <strong>{ultima}</strong>
-      </div>
-      <div className="metric-card__row">
-        <span>Promedio período</span>
-        <strong>{promedio}</strong>
+      <div className="metric-card__values">
+        <div className="metric-card__row">
+          <span>Última entrega</span>
+          <strong>{ultima}</strong>
+        </div>
+        <div className="metric-card__row">
+          <span>Promedio período</span>
+          <strong>{promedio}</strong>
+        </div>
       </div>
     </div>
   );

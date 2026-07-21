@@ -1188,25 +1188,35 @@ th.sortable.sorted {
 
 /* Resumen — tarjeta de indicador (última vs promedio) */
 .metric-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
 .metric-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 1rem 1.15rem;
+  padding: 1rem 1.25rem;
 }
 
 .metric-card__head {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin-bottom: 0.6rem;
+}
+
+.metric-card__values {
+  display: flex;
+  gap: 2.5rem;
+  flex-wrap: wrap;
 }
 
 .metric-card__icon {
@@ -1232,10 +1242,8 @@ th.sortable.sorted {
 
 .metric-card__row {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.25rem 0;
+  flex-direction: column;
+  gap: 0.1rem;
 }
 
 .metric-card__row span {

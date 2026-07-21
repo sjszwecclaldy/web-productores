@@ -10,7 +10,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { CHART_COLORS } from '../chartUtils';
+import { CHART_COLORS, formatMonthYear } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
@@ -62,6 +62,7 @@ export default function MonthlyBarChart({
             const s = series.find((b) => b.key === name);
             return [fmt(value), s?.label || name];
           }}
+          labelFormatter={(l, p) => (p && p[0] && p[0].payload.month ? formatMonthYear(p[0].payload.month) : l)}
           contentStyle={{ borderRadius: 8, border: '1px solid #ccddd4' }}
         />
         <Legend

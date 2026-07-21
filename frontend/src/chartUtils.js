@@ -263,3 +263,40 @@ export function litrosByYearMonth(rows, dateKey, valueKey) {
   const years = [...yearsSet].sort();
   return { years, data };
 }
+
+export function formatMonthYear(month) {
+  if (!month) return '';
+  const d = new Date(String(month).slice(0, 7) + '-01T12:00:00');
+  if (isNaN(d.getTime())) return String(month);
+  return d.toLocaleDateString('es-AR', { month: 'short', year: 'numeric' });
+}
+
+// Promedio de un indicador por mes y por anio (para el grafico comparativo entre anios).
+export function avgByYearMonth(rows, dateKey, valueKey) {
+  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const yearsSet = new Set();
+  const sums = new Map();
+  for (const row of rows) {
+    const ds = String(row[dateKey] || '').slice(0, 10);
+    if (ds.length < 7) continue;
+    const v = row[valueKey];
+    if (v == null) continue;
+    const year = ds.slice(0, 4);
+    const monthIdx = parseInt(ds.slice(5, 7), 10) - 1;
+    if (monthIdx < 0 || monthIdx > 11) continue;
+    yearsSet.add(year);
+    if (!sums.has(monthIdx)) sums.set(monthIdx, {});
+    const b = sums.get(monthIdx);
+    if (!b[year]) b[year] = { s: 0, n: 0 };
+    b[year].s += Number(v) || 0;
+    b[year].n += 1;
+  }
+  const data = [];
+  for (let i = 0; i < 12; i++) {
+    const row = { monthIdx: i, label: months[i] };
+    const b = sums.get(i);
+    if (b) for (const y of Object.keys(b)) row[y] = Math.round((b[y].s / b[y].n) * 100) / 100;
+    data.push(row);
+  }
+  return { years: [...yearsSet].sort(), data };
+}

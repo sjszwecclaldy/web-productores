@@ -11,7 +11,7 @@ import {
 import { useContext } from 'react';
 import { CHART_COLORS } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
-import { fmt } from '../utils';
+import { fmt, fmtDate } from '../utils';
 
 function isSameChartDate(a, b) {
   if (!a || !b) return false;
@@ -88,6 +88,7 @@ export default function CalidadLineChart({
             const s = lines.find((l) => l.key === name);
             return [fmt(value), s?.label || name];
           }}
+          labelFormatter={(l, p) => (p && p[0] && p[0].payload.date ? fmtDate(p[0].payload.date) : l)}
           contentStyle={{ borderRadius: 8, border: '1px solid #ccddd4' }}
         />
         <Legend
