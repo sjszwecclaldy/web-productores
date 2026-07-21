@@ -164,3 +164,33 @@ ALTER TABLE comunicados ADD COLUMN IF NOT EXISTS archivo BYTEA;
 ALTER TABLE comunicados ADD COLUMN IF NOT EXISTS archivo_nombre TEXT;
 ALTER TABLE comunicados ADD COLUMN IF NOT EXISTS archivo_tipo TEXT;
 ALTER TABLE comunicados ALTER COLUMN cuerpo DROP NOT NULL;
+
+CREATE TABLE IF NOT EXISTS control_reglas (
+  id SERIAL PRIMARY KEY,
+  indicador TEXT NOT NULL,
+  ventana_dias INT NOT NULL DEFAULT 4,
+  umbral_pct NUMERIC NOT NULL DEFAULT 15,
+  direccion TEXT NOT NULL DEFAULT 'arriba',
+  activa BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS notificaciones (
+  id SERIAL PRIMARY KEY,
+  card_code TEXT NOT NULL,
+  card_name TEXT,
+  indicador TEXT NOT NULL,
+  fecha DATE NOT NULL,
+  valor NUMERIC,
+  promedio NUMERIC,
+  desvio_pct NUMERIC,
+  direccion TEXT,
+  regla_id INT,
+  mensaje TEXT,
+  leida BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (card_code, indicador, fecha)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notificaciones_created ON notificaciones (created_at DESC);

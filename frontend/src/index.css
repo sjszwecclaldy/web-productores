@@ -1279,3 +1279,32 @@ th.sortable.sorted {
 .link-descargar:hover {
   color: var(--primary-hover);
 }
+
+.subtabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.subtab {
+  border: none;
+  background: none;
+  padding: 0.6rem 0.9rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.subtab:hover {
+  color: var(--primary);
+}
+
+.subtab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}

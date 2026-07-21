@@ -387,4 +387,130 @@ router.delete('/comunicados/:id', async (req, res) => {
   }
 });
 
+// --- Reglas de control ex-post (filtros) ---
+
+const INDICADORES_VALIDOS = ['litros', 'grasa', 'proteina', 'celulas', 'bacterias'];
+const DIRECCIONES_VALIDAS = ['arriba', 'abajo', 'ambos'];
+
+router.get('/control-reglas', async (_req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, indicador, ventana_dias, umbral_pct, direccion, activa
+       FROM control_reglas ORDER BY indicador ASC, id ASC`
+    );
+    res.json({ data: rows });
+  } catch (err) {
+    console.error('control-reglas list error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.post('/control-reglas', async (req, res) => {
+  const { indicador, ventana_dias, umbral_pct, direccion, activa } = req.body;
+  if (!INDICADORES_VALIDOS.includes(indicador)) {
+    return res.status(400).json({ error: 'Indicador inválido' });
+  }
+  const dir = DIRECCIONES_VALIDAS.includes(direccion) ? direccion : 'arriba';
+  const ventana = parseInt(ventana_dias, 10);
+  const umbral = Number(umbral_pct);
+  if (!Number.isInteger(ventana) || ventana < 1 || !Number.isFinite(umbral) || umbral <= 0) {
+    return res.status(400).json({ error: 'Ventana o umbral inválidos' });
+  }
+  try {
+    const { rows } = await query(
+      `INSERT INTO control_reglas (indicador, ventana_dias, umbral_pct, direccion, activa)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [indicador, ventana, umbral, dir, activa !== false]
+    );
+    res.json({ ok: true, id: rows[0].id });
+  } catch (err) {
+    console.error('control-reglas create error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.put('/control-reglas/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'id inválido' });
+  const { indicador, ventana_dias, umbral_pct, direccion, activa } = req.body;
+  if (!INDICADORES_VALIDOS.includes(indicador)) {
+    return res.status(400).json({ error: 'Indicador inválido' });
+  }
+  const dir = DIRECCIONES_VALIDAS.includes(direccion) ? direccion : 'arriba';
+  const ventana = parseInt(ventana_dias, 10);
+  const umbral = Number(umbral_pct);
+  if (!Number.isInteger(ventana) || ventana < 1 || !Number.isFinite(umbral) || umbral <= 0) {
+    return res.status(400).json({ error: 'Ventana o umbral inválidos' });
+  }
+  try {
+    const { rowCount } = await query(
+      `UPDATE control_reglas
+       SET indicador = $2, ventana_dias = $3, umbral_pct = $4, direccion = $5, activa = $6, updated_at = NOW()
+       WHERE id = $1`,
+      [id, indicador, ventana, umbral, dir, activa !== false]
+    );
+    if (rowCount === 0) return res.status(404).json({ error: 'Regla no encontrada' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('control-reglas update error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.delete('/control-reglas/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'id inválido' });
+  try {
+    const { rowCount } = await query('DELETE FROM control_reglas WHERE id = $1', [id]);
+    if (rowCount === 0) return res.status(404).json({ error: 'Regla no encontrada' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('control-reglas delete error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// --- Notificaciones (avisos de datos atípicos) ---
+
+router.get('/notificaciones', async (_req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, card_code, card_name, indicador, to_char(fecha, 'YYYY-MM-DD') AS fecha,
+              valor, promedio, desvio_pct, direccion, mensaje, leida,
+              to_char(created_at, 'YYYY-MM-DD HH24:MI') AS creado
+       FROM notificaciones
+       ORDER BY leida ASC, created_at DESC
+       LIMIT 200`
+    );
+    res.json({ data: rows });
+  } catch (err) {
+    console.error('notificaciones list error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.post('/notificaciones/:id/leer', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'id inválido' });
+  try {
+    await query('UPDATE notificaciones SET leida = TRUE WHERE id = $1', [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('notificaciones leer error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.delete('/notificaciones/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'id inválido' });
+  try {
+    await query('DELETE FROM notificaciones WHERE id = $1', [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('notificaciones delete error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
 module.exports = router;

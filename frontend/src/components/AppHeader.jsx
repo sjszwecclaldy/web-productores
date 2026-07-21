@@ -31,7 +31,7 @@ const NAV_ITEMS = [
   { to: '/comunicados', label: 'Comunicados', Icon: IconComunicados },
 ];
 
-const ADMIN_NAV_ITEM = { to: '/comparativa', label: 'Comparativa', Icon: IconComparativa };
+const ADMIN_NAV_ITEM = { to: '/tecnico', label: 'Técnico', Icon: IconComparativa };
 
 function normalize(s) {
   return String(s)

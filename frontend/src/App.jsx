@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { getToken, isAdmin } from './api';
 import AdminProducerGate from './components/AdminProducerGate';
-import PanelComparativo from './pages/PanelComparativo';
+import Tecnico from './pages/Tecnico';
 import Login from './pages/Login';
 import Activate from './pages/Activate';
 import ForgotPassword from './pages/ForgotPassword';
@@ -135,15 +135,16 @@ export default function App() {
         }
       />
       <Route
-        path="/comparativa"
+        path="/tecnico"
         element={
           <PrivateRoute>
             <RequireAdmin>
-              <PanelComparativo />
+              <Tecnico />
             </RequireAdmin>
           </PrivateRoute>
         }
       />
+      <Route path="/comparativa" element={<Navigate to="/tecnico" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

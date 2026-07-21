@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { pool, query } = require('../db');
 const { requireApiKey } = require('../middleware/apiKey');
 const { generateActivationCode, activationExpiryDate } = require('../utils/tokens');
+const { evaluarControles } = require('../controles');
 
 const router = express.Router();
 
@@ -199,6 +200,12 @@ router.post('/ingest/calidad-composicion', async (req, res) => {
 
     await client.query('COMMIT');
 
+    try {
+      await evaluarControles('calidad_composicion', Array.from(seenProducers.keys()));
+    } catch (e) {
+      console.error('controles composicion:', e.message);
+    }
+
     res.json({ inserted, updated });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
@@ -285,6 +292,13 @@ router.post('/ingest/remisiones', async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    try {
+      await evaluarControles('remisiones', Array.from(seenProducers.keys()));
+    } catch (e) {
+      console.error('controles remisiones:', e.message);
+    }
+
     res.json({ inserted, updated });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
@@ -502,6 +516,13 @@ router.post('/ingest/calidad-sanitaria', async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    try {
+      await evaluarControles('calidad_sanitaria', Array.from(seenProducers));
+    } catch (e) {
+      console.error('controles calidad-sanitaria:', e.message);
+    }
+
     res.json({ inserted, updated });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
