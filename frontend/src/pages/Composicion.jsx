@@ -218,10 +218,10 @@ export default function Composicion() {
 
         <div className="charts-grid">
           <ChartPanel title="Grasa — comparación de años">
-            <YearCompareLineChart data={yearGrasa.data} years={yearGrasa.years} />
+            <YearCompareLineChart data={yearGrasa.data} years={yearGrasa.years} unit="%" />
           </ChartPanel>
           <ChartPanel title="Proteína — comparación de años">
-            <YearCompareLineChart data={yearProteina.data} years={yearProteina.years} />
+            <YearCompareLineChart data={yearProteina.data} years={yearProteina.years} unit="%" />
           </ChartPanel>
         </div>
 

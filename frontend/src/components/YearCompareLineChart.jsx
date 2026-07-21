@@ -16,7 +16,7 @@ import { fmt } from '../utils';
 const YEAR_COLORS = [CHART_COLORS.primary, CHART_COLORS.accent, CHART_COLORS.gold, '#8a6d3b', '#5a6d62'];
 
 // Comparación de años: una línea por año, eje X = meses (Ene–Dic).
-export default function YearCompareLineChart({ data, years, emptyMessage = 'Sin datos para comparar' }) {
+export default function YearCompareLineChart({ data, years, unit = 'L', emptyMessage = 'Sin datos para comparar' }) {
   const ctxHeight = useContext(ChartHeightContext);
 
   if (!data || data.length === 0 || !years || years.length === 0) {
@@ -30,7 +30,7 @@ export default function YearCompareLineChart({ data, years, emptyMessage = 'Sin 
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#5a6d62' }} />
         <YAxis tick={{ fontSize: 11, fill: '#5a6d62' }} width={56} />
         <Tooltip
-          formatter={(v, name) => [`${fmt(v)} L`, name]}
+          formatter={(v, name) => [`${fmt(v)}${unit ? ` ${unit}` : ''}`, name]}
           contentStyle={{ borderRadius: 8, border: '1px solid #ccddd4' }}
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />

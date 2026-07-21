@@ -25,15 +25,13 @@ function MetricCard({ icon, name, ultima, promedio }) {
         <span className="metric-card__icon">{icon}</span>
         <span className="metric-card__name">{name}</span>
       </div>
-      <div className="metric-card__values">
-        <div className="metric-card__row">
-          <span>Última entrega</span>
-          <strong>{ultima}</strong>
-        </div>
-        <div className="metric-card__row">
-          <span>Promedio período</span>
-          <strong>{promedio}</strong>
-        </div>
+      <div className="metric-card__row">
+        <span>Última entrega</span>
+        <strong>{ultima}</strong>
+      </div>
+      <div className="metric-card__row">
+        <span>Promedio período</span>
+        <strong>{promedio}</strong>
       </div>
     </div>
   );
@@ -139,8 +137,8 @@ export default function Resumen() {
     { icon: '🥛', name: 'Litros', u: fmtL(ultima.litros), p: fmtL(promedio.litros) },
     { icon: '🧪', name: 'Grasa', u: fmtP(ultima.grasa), p: fmtP(promedio.grasa) },
     { icon: '🧬', name: 'Proteína', u: fmtP(ultima.proteina), p: fmtP(promedio.proteina) },
-    { icon: '🔬', name: 'Células somáticas', u: fmtN(ultima.celulas), p: fmtN(promedio.celulas) },
-    { icon: '🦠', name: 'Recuento bacteriano', u: fmtN(ultima.bacterias), p: fmtN(promedio.bacterias) },
+    { icon: '🔬', name: 'Células somáticas (miles)', u: fmtN(ultima.celulas), p: fmtN(promedio.celulas) },
+    { icon: '🦠', name: 'Recuento bacteriano (miles)', u: fmtN(ultima.bacterias), p: fmtN(promedio.bacterias) },
   ];
 
   if (loading) {

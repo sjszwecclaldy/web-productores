@@ -15,8 +15,8 @@ import YearCompareLineChart from '../components/YearCompareLineChart';
 
 const EXPORT_COLS = [
   { header: 'Fecha', value: (r) => fmtDate(r.lab_date) },
-  { header: 'Células somáticas', value: (r) => r.celulas },
-  { header: 'Recuento bacteriano', value: (r) => r.bacterias },
+  { header: 'Células somáticas (miles)', value: (r) => r.celulas },
+  { header: 'Recuento bacteriano (miles)', value: (r) => r.bacterias },
 ];
 
 export default function Calidad() {
@@ -127,12 +127,12 @@ export default function Calidad() {
         <div className="kpi-grid">
           <KpiCard
             icon="🔬"
-            label="Prom. células somáticas"
+            label="Prom. células somáticas (miles)"
             value={promedios.celulas != null ? fmt(promedios.celulas) : '—'}
           />
           <KpiCard
             icon="🦠"
-            label="Prom. recuento bacteriano"
+            label="Prom. recuento bacteriano (miles)"
             value={promedios.bacterias != null ? fmt(promedios.bacterias) : '—'}
           />
         </div>
@@ -141,8 +141,8 @@ export default function Calidad() {
           title={ultima ? `Última muestra (${fmtDate(ultima.lab_date)}) — medidores` : 'Última muestra — medidores'}
         >
           <div className="gauges-row">
-            <QualityGauge label="Células somáticas" value={ultima?.celulas} max={1000} unit="" />
-            <QualityGauge label="Recuento bacteriano" value={ultima?.bacterias} max={200} unit="" />
+            <QualityGauge label="Células somáticas (miles)" value={ultima?.celulas} max={1000} unit="" />
+            <QualityGauge label="Recuento bacteriano (miles)" value={ultima?.bacterias} max={200} unit="" />
           </div>
           {!ultima && <p className="chart-empty">Sin muestras de calidad.</p>}
         </ChartPanel>
@@ -163,11 +163,11 @@ export default function Calidad() {
         </div>
 
         <div className="charts-grid">
-          <ChartPanel title="Células somáticas — comparación de años">
-            <YearCompareLineChart data={yearCelulas.data} years={yearCelulas.years} />
+          <ChartPanel title="Células somáticas (miles) — comparación de años">
+            <YearCompareLineChart data={yearCelulas.data} years={yearCelulas.years} unit="" />
           </ChartPanel>
-          <ChartPanel title="Recuento bacteriano — comparación de años">
-            <YearCompareLineChart data={yearBacterias.data} years={yearBacterias.years} />
+          <ChartPanel title="Recuento bacteriano (miles) — comparación de años">
+            <YearCompareLineChart data={yearBacterias.data} years={yearBacterias.years} unit="" />
           </ChartPanel>
         </div>
 
@@ -179,8 +179,8 @@ export default function Calidad() {
                 <thead>
                   <tr>
                     <th>Fecha</th>
-                    <th className="num">Células somáticas</th>
-                    <th className="num">Recuento bacteriano</th>
+                    <th className="num">Células somáticas (miles)</th>
+                    <th className="num">Recuento bacteriano (miles)</th>
                     <th>Estado</th>
                   </tr>
                 </thead>
@@ -211,8 +211,8 @@ export default function Calidad() {
               <thead>
                 <tr>
                   <th>Fecha</th>
-                  <th className="num">Células somáticas</th>
-                  <th className="num">Recuento bacteriano</th>
+                  <th className="num">Células somáticas (miles)</th>
+                  <th className="num">Recuento bacteriano (miles)</th>
                 </tr>
               </thead>
               <tbody>
