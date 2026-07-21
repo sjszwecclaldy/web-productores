@@ -190,6 +190,21 @@ export default function Composicion() {
 
         <SelectedDateBanner date={selectedDate} onClear={() => setSelectedDate(null)} />
 
+        <ChartPanel
+          title={
+            selectedDate
+              ? `Muestra del ${fmtDate(selectedDate)} — medidores`
+              : 'Ultima muestra — medidores'
+          }
+        >
+          <div className="gauges-row">
+            <QualityGauge label="Grasa" value={ultimo?.fat} max={6} />
+            <QualityGauge label="Proteina" value={ultimo?.protein} max={5} />
+            <QualityGauge label="Lactosa" value={ultimo?.lactose} max={6} />
+            <QualityGauge label="Solidos totales" value={ultimo?.ts} max={14} />
+          </div>
+        </ChartPanel>
+
         <div className="cards-grid">
           <ResumenCard
             title="Promedio del período"
@@ -204,20 +219,6 @@ export default function Composicion() {
               selectedDate={selectedDate}
               onDateSelect={handleDateSelect}
             />
-          </ChartPanel>
-          <ChartPanel
-            title={
-              selectedDate
-                ? `Muestra del ${fmtDate(selectedDate)} — medidores`
-                : 'Ultima muestra — medidores'
-            }
-          >
-            <div className="gauges-row">
-              <QualityGauge label="Grasa" value={ultimo?.fat} max={6} />
-              <QualityGauge label="Proteina" value={ultimo?.protein} max={5} />
-              <QualityGauge label="Lactosa" value={ultimo?.lactose} max={6} />
-              <QualityGauge label="Solidos totales" value={ultimo?.ts} max={14} />
-            </div>
           </ChartPanel>
         </div>
 

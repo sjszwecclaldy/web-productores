@@ -129,6 +129,16 @@ export default function Calidad() {
 
         <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} activePreset={activePreset} onApply={applyPeriod} />
 
+        <ChartPanel
+          title={ultima ? `Última muestra (${fmtDate(ultima.lab_date)}) — medidores` : 'Última muestra — medidores'}
+        >
+          <div className="gauges-row">
+            <QualityGauge label="Células somáticas (miles)" value={ultima?.celulas} max={1000} unit="" />
+            <QualityGauge label="Recuento bacteriano (miles)" value={ultima?.bacterias} max={200} unit="" />
+          </div>
+          {!ultima && <p className="chart-empty">Sin muestras de calidad.</p>}
+        </ChartPanel>
+
         <div className="kpi-grid">
           <KpiCard
             icon="🔬"
@@ -141,16 +151,6 @@ export default function Calidad() {
             value={promedios.bacterias != null ? fmt(promedios.bacterias) : '—'}
           />
         </div>
-
-        <ChartPanel
-          title={ultima ? `Última muestra (${fmtDate(ultima.lab_date)}) — medidores` : 'Última muestra — medidores'}
-        >
-          <div className="gauges-row">
-            <QualityGauge label="Células somáticas (miles)" value={ultima?.celulas} max={1000} unit="" />
-            <QualityGauge label="Recuento bacteriano (miles)" value={ultima?.bacterias} max={200} unit="" />
-          </div>
-          {!ultima && <p className="chart-empty">Sin muestras de calidad.</p>}
-        </ChartPanel>
 
         <div className="charts-grid">
           <ChartPanel title="Evolución células somáticas">
