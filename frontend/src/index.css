@@ -1280,6 +1280,23 @@ th.sortable.sorted {
   color: var(--primary-hover);
 }
 
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: var(--bg-tint);
+}
+
+.row-nueva td {
+  font-weight: 600;
+}
+
+.row-highlight {
+  background: var(--bg-tint-alt);
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+
 .subtabs {
   display: flex;
   gap: 0.5rem;

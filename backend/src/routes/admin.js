@@ -513,4 +513,32 @@ router.delete('/notificaciones/:id', async (req, res) => {
   }
 });
 
+router.post('/notificaciones/eliminar', async (req, res) => {
+  const ids = Array.isArray(req.body?.ids)
+    ? req.body.ids.map((x) => parseInt(x, 10)).filter(Number.isInteger)
+    : [];
+  if (ids.length === 0) return res.status(400).json({ error: 'Sin ids' });
+  try {
+    await query('DELETE FROM notificaciones WHERE id = ANY($1)', [ids]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('notificaciones bulk delete error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.post('/notificaciones/leer', async (req, res) => {
+  const ids = Array.isArray(req.body?.ids)
+    ? req.body.ids.map((x) => parseInt(x, 10)).filter(Number.isInteger)
+    : [];
+  if (ids.length === 0) return res.status(400).json({ error: 'Sin ids' });
+  try {
+    await query('UPDATE notificaciones SET leida = TRUE WHERE id = ANY($1)', [ids]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('notificaciones bulk read error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
 module.exports = router;

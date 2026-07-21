@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import {
   avgByYearMonth,
@@ -85,13 +85,18 @@ function CompoRow({ r }) {
 
 export default function Composicion() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const highlight = searchParams.get('fecha');
   const [registros, setRegistros] = useState([]);
   const [allRegistros, setAllRegistros] = useState([]);
   const [activePreset, setActivePreset] = useState(30);
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState(() => apiFromDate(30));
+  const [from, setFrom] = useState(() => {
+    const def = apiFromDate(30);
+    return highlight && highlight < def ? highlight : def;
+  });
   const [to, setTo] = useState('');
 
   async function loadRegistros(f = from, t = to) {
@@ -245,7 +250,10 @@ export default function Composicion() {
                 </thead>
                 <tbody>
                   {mesCorriente.map((r, i) => (
-                    <tr key={`mc-${r.collection_date}-${i}`}>
+                    <tr
+                      key={`mc-${r.collection_date}-${i}`}
+                      className={highlight && String(r.collection_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
+                    >
                       <CompoRow r={r} />
                       <td><span className="badge badge--pendiente">Pendiente de validación</span></td>
                     </tr>
@@ -279,7 +287,10 @@ export default function Composicion() {
               </thead>
               <tbody>
                 {historico.map((r, i) => (
-                  <tr key={`${r.collection_date}-${i}`}>
+                  <tr
+                    key={`${r.collection_date}-${i}`}
+                    className={highlight && String(r.collection_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
+                  >
                     <CompoRow r={r} />
                   </tr>
                 ))}

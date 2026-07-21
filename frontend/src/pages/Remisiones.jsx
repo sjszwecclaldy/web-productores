@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import {
   groupSumByDate,
@@ -27,13 +27,18 @@ const EXPORT_COLS = [
 
 export default function Remisiones() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const highlight = searchParams.get('fecha');
   const [registros, setRegistros] = useState([]);
   const [allRegistros, setAllRegistros] = useState([]);
   const [activePreset, setActivePreset] = useState(30);
   const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState(() => apiFromDate(30));
+  const [from, setFrom] = useState(() => {
+    const def = apiFromDate(30);
+    return highlight && highlight < def ? highlight : def;
+  });
   const [to, setTo] = useState('');
 
   async function loadRegistros(f = from, t = to) {
@@ -204,7 +209,10 @@ export default function Remisiones() {
                 </thead>
                 <tbody>
                   {mesCorriente.map((r, i) => (
-                    <tr key={`mc-${r.doc_num}-${i}`}>
+                    <tr
+                      key={`mc-${r.doc_num}-${i}`}
+                      className={highlight && String(r.doc_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
+                    >
                       <td>{fmtDate(r.doc_date)}</td>
                       <td>{r.doc_num}</td>
                       <td className="num">{fmt(r.quantity)}</td>
@@ -239,7 +247,10 @@ export default function Remisiones() {
               </thead>
               <tbody>
                 {historico.map((r, i) => (
-                  <tr key={`${r.doc_num}-${i}`}>
+                  <tr
+                    key={`${r.doc_num}-${i}`}
+                    className={highlight && String(r.doc_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
+                  >
                     <td>{fmtDate(r.doc_date)}</td>
                     <td>{r.doc_num}</td>
                     <td className="num">{fmt(r.quantity)}</td>

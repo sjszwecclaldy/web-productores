@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import { avgByYearMonth, CHART_COLORS, formatChartDate } from '../chartUtils';
 import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate, isCurrentMonth } from '../utils';
@@ -21,12 +21,17 @@ const EXPORT_COLS = [
 
 export default function Calidad() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const highlight = searchParams.get('fecha');
   const [registros, setRegistros] = useState([]);
   const [allRegistros, setAllRegistros] = useState([]);
   const [activePreset, setActivePreset] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState(() => apiFromDate(30));
+  const [from, setFrom] = useState(() => {
+    const def = apiFromDate(30);
+    return highlight && highlight < def ? highlight : def;
+  });
   const [to, setTo] = useState('');
 
   async function loadRegistros(f = from, t = to) {
@@ -186,7 +191,10 @@ export default function Calidad() {
                 </thead>
                 <tbody>
                   {mesCorriente.map((r, i) => (
-                    <tr key={`mc-${r.lab_date}-${i}`}>
+                    <tr
+                      key={`mc-${r.lab_date}-${i}`}
+                      className={highlight && String(r.lab_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
+                    >
                       <td>{fmtDate(r.lab_date)}</td>
                       <td className="num">{fmt(r.celulas)}</td>
                       <td className="num">{fmt(r.bacterias)}</td>
@@ -217,7 +225,10 @@ export default function Calidad() {
               </thead>
               <tbody>
                 {historico.map((r, i) => (
-                  <tr key={`${r.lab_date}-${i}`}>
+                  <tr
+                    key={`${r.lab_date}-${i}`}
+                    className={highlight && String(r.lab_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
+                  >
                     <td>{fmtDate(r.lab_date)}</td>
                     <td className="num">{fmt(r.celulas)}</td>
                     <td className="num">{fmt(r.bacterias)}</td>
