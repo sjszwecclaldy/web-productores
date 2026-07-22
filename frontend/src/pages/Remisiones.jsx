@@ -232,12 +232,13 @@ export default function Remisiones() {
           <LitrosLineChart data={litrosPorMes} dots />
         </ChartPanel>
 
-        <ChartPanel title="Temperatura por mes">
+        <ChartPanel title="Temperatura por mes (promedio)">
           <LitrosLineChart
             data={tempPorMes}
             dots
-            valueLabel="Temperatura"
+            valueLabel="Promedio"
             valueUnit=" °C"
+            yTickDecimals={1}
             emptyMessage="Sin datos de temperatura para el período"
           />
         </ChartPanel>

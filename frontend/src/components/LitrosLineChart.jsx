@@ -21,6 +21,7 @@ export default function LitrosLineChart({
   dots = false,
   valueLabel = 'Litros',
   valueUnit = ' L',
+  yTickDecimals,
   emptyMessage = 'Sin datos para el período',
 }) {
   const ctxHeight = useContext(ChartHeightContext);
@@ -31,6 +32,21 @@ export default function LitrosLineChart({
 
   const chartData = data.map((d) => ({ ...d, total: Number(d.total) }));
   const domain = domainCentered(chartData.map((d) => d.total));
+
+  function formatYTick(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '';
+    if (yTickDecimals != null) {
+      return n.toLocaleString('es-AR', {
+        minimumFractionDigits: yTickDecimals,
+        maximumFractionDigits: yTickDecimals,
+      });
+    }
+    if (Math.abs(n) >= 100) {
+      return Math.round(n).toLocaleString('es-AR');
+    }
+    return n.toLocaleString('es-AR', { maximumFractionDigits: 1 });
+  }
 
   function handleClick(state) {
     const payload = state?.activePayload?.[0]?.payload;
@@ -54,7 +70,13 @@ export default function LitrosLineChart({
           interval="preserveStartEnd"
           minTickGap={dots ? 8 : 40}
         />
-        <YAxis domain={domain} tick={{ fontSize: 11, fill: '#5a6d62' }} width={52} allowDataOverflow />
+        <YAxis
+          domain={domain}
+          tick={{ fontSize: 11, fill: '#5a6d62' }}
+          tickFormatter={formatYTick}
+          width={yTickDecimals != null ? 48 : 52}
+          allowDataOverflow
+        />
         <Tooltip
           formatter={(v) => [`${fmt(v)}${valueUnit}`, valueLabel]}
           labelFormatter={(l, p) => {
