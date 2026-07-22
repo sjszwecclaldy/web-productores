@@ -155,9 +155,13 @@ $Domains = @(
         SapService  = 'VENCIMIENTO'
         DateField   = ''
         IngestPath  = '/internal/ingest/vencimientos'
-        # Vacio a proposito: la vista semantica VENCIMIENTO falla con $select parcial
-        # (HANA 339). Se trae completa, igual que en Postman; el Transform elige campos.
-        SelectFields = @()
+        # Solo columnas de dimension (texto/fecha). Se excluyen las medidas numericas
+        # U_DICOSE y GroupCode: la vista semantica las agrega/castea a decimal y HANA
+        # falla (339 invalid number) en filas con valor no numerico. Sin medidas no
+        # hay agregacion. dicose/group_code quedan null hasta ajustar la vista.
+        SelectFields = @(
+            'CardCode', 'CardName', 'E_Mail', 'Phone1', 'U_VENC_REFRE', 'validFor'
+        )
         Transform = {
             param($Row)
             @{
