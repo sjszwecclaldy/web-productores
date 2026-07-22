@@ -21,7 +21,7 @@ const EXPORT_COLS = [
   { header: 'Fecha', value: (r) => fmtDate(r.doc_date) },
   { header: 'Documento', value: (r) => r.doc_num },
   { header: 'Concepto', value: (r) => r.descripcion || '' },
-  { header: 'Importe', value: (r) => r.line_total },
+  { header: 'Importe Bruto', value: (r) => r.line_total },
 ];
 
 export default function Reliquidaciones() {
@@ -142,7 +142,7 @@ export default function Reliquidaciones() {
                 {ultima.descripcion && (
                   <div className="stat-row"><span>Concepto</span><span className="value">{ultima.descripcion}</span></div>
                 )}
-                <div className="stat-row"><span>Importe</span><span className="value">{fmt(ultima.line_total)}</span></div>
+                <div className="stat-row"><span>Importe Bruto</span><span className="value">{fmt(ultima.line_total)}</span></div>
               </>
             ) : (
               <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
@@ -153,7 +153,7 @@ export default function Reliquidaciones() {
             <h3>{selectedMonth ? `Totales ${formatMonthLabel(selectedMonth)}` : 'Totales del período'}</h3>
             {totales.reliquidaciones > 0 ? (
               <>
-                <div className="stat-row"><span>Importe total</span><span className="value">{fmt(totales.total_importe)}</span></div>
+                <div className="stat-row"><span>Importe total bruto</span><span className="value">{fmt(totales.total_importe)}</span></div>
                 <div className="stat-row"><span>Reliquidaciones</span><span className="value">{totales.reliquidaciones}</span></div>
               </>
             ) : (
@@ -167,7 +167,7 @@ export default function Reliquidaciones() {
             data={chartMonthly}
             selectedMonth={selectedMonth}
             onMonthSelect={handleMonthSelect}
-            bars={[{ key: 'importe', label: 'Importe', color: CHART_COLORS.gold }]}
+            bars={[{ key: 'importe', label: 'Importe Bruto', color: CHART_COLORS.gold }]}
           />
         </ChartPanel>
 
@@ -181,7 +181,7 @@ export default function Reliquidaciones() {
                     <th>Fecha</th>
                     <th>Documento</th>
                     <th>Concepto</th>
-                    <th className="num">Importe</th>
+                    <th className="num">Importe Bruto</th>
                     <th>Estado</th>
                   </tr>
                 </thead>
@@ -219,7 +219,7 @@ export default function Reliquidaciones() {
                   <th>Fecha</th>
                   <th>Documento</th>
                   <th>Concepto</th>
-                  <th className="num">Importe</th>
+                  <th className="num">Importe Bruto</th>
                 </tr>
               </thead>
               <tbody>
