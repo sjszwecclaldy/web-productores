@@ -113,7 +113,7 @@ $Domains = @(
         IngestPath  = '/internal/ingest/reliquidaciones'
         SelectFields = @(
             'DocNum', 'NumAtCard', 'DocDate', 'CardCode', 'CardName',
-            'Dscription', 'LineTotal'
+            'Dscription', 'LineTotal', 'Total_WTAmnt', 'LineTotal_Neto'
         )
         Transform = {
             param($Row)
@@ -125,6 +125,8 @@ $Domains = @(
                 doc_date    = $Row.DocDate
                 descripcion = $Row.Dscription
                 line_total  = $Row.LineTotal
+                retencion   = $Row.Total_WTAmnt
+                neto        = $Row.LineTotal_Neto
             }
         }
     },

@@ -101,6 +101,10 @@ CREATE TABLE IF NOT EXISTS reliquidaciones (
 CREATE INDEX IF NOT EXISTS idx_reliquidaciones_card_date
   ON reliquidaciones (card_code, doc_date DESC);
 
+-- Desglose de importe neto (vista RELIQUIDACION): retencion = Total_WTAmnt, neto = LineTotal_Neto.
+ALTER TABLE reliquidaciones ADD COLUMN IF NOT EXISTS retencion NUMERIC;
+ALTER TABLE reliquidaciones ADD COLUMN IF NOT EXISTS neto NUMERIC;
+
 CREATE TABLE IF NOT EXISTS calidad_sanitaria (
   id SERIAL PRIMARY KEY,
   card_code TEXT NOT NULL,

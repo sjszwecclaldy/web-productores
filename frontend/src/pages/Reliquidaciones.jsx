@@ -26,6 +26,8 @@ const EXPORT_COLS = [
   { header: 'Documento', value: (r) => r.doc_num },
   { header: 'Concepto', value: (r) => r.descripcion || '' },
   { header: 'Importe Bruto', value: (r) => r.line_total },
+  { header: 'Retención', value: (r) => r.retencion },
+  { header: 'Importe Neto', value: (r) => r.neto },
 ];
 
 export default function Reliquidaciones() {
@@ -96,6 +98,8 @@ export default function Reliquidaciones() {
     const src = selectedMonth ? selectedRows : registros;
     return {
       total_importe: src.reduce((sum, row) => sum + (Number(row.line_total) || 0), 0),
+      total_retencion: src.reduce((sum, row) => sum + (Number(row.retencion) || 0), 0),
+      total_neto: src.reduce((sum, row) => sum + (Number(row.neto) || 0), 0),
       reliquidaciones: src.length,
     };
   }, [selectedMonth, selectedRows, registros]);
@@ -151,6 +155,8 @@ export default function Reliquidaciones() {
                   <div className="stat-row"><span>Concepto</span><span className="value">{ultima.descripcion}</span></div>
                 )}
                 <div className="stat-row"><span>Importe Bruto</span><span className="value">{fmt(ultima.line_total)}</span></div>
+                <div className="stat-row"><span>Retención</span><span className="value">{fmt(ultima.retencion)}</span></div>
+                <div className="stat-row"><span>Importe Neto</span><span className="value">{fmt(ultima.neto)}</span></div>
               </>
             ) : (
               <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
@@ -162,6 +168,8 @@ export default function Reliquidaciones() {
             {totales.reliquidaciones > 0 ? (
               <>
                 <div className="stat-row"><span>Importe total bruto</span><span className="value">{fmt(totales.total_importe)}</span></div>
+                <div className="stat-row"><span>Retención total</span><span className="value">{fmt(totales.total_retencion)}</span></div>
+                <div className="stat-row"><span>Importe total neto</span><span className="value">{fmt(totales.total_neto)}</span></div>
                 <div className="stat-row"><span>Reliquidaciones</span><span className="value">{totales.reliquidaciones}</span></div>
               </>
             ) : (

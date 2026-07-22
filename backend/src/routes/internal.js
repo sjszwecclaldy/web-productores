@@ -428,14 +428,16 @@ router.post('/ingest/reliquidaciones', async (req, res) => {
 
       const result = await client.query(
         `INSERT INTO reliquidaciones (
-           card_code, doc_num, num_at_card, doc_date, descripcion, line_total, synced_at
-         ) VALUES ($1,$2,$3,$4,$5,$6,NOW())
+           card_code, doc_num, num_at_card, doc_date, descripcion, line_total, retencion, neto, synced_at
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
          ON CONFLICT (card_code, doc_num)
          DO UPDATE SET
            num_at_card = EXCLUDED.num_at_card,
            doc_date = EXCLUDED.doc_date,
            descripcion = EXCLUDED.descripcion,
            line_total = EXCLUDED.line_total,
+           retencion = EXCLUDED.retencion,
+           neto = EXCLUDED.neto,
            synced_at = NOW()
          RETURNING (xmax = 0) AS is_insert`,
         [
@@ -445,6 +447,8 @@ router.post('/ingest/reliquidaciones', async (req, res) => {
           docDate,
           rec.descripcion ?? rec.Dscription ?? null,
           rec.line_total ?? rec.LineTotal ?? null,
+          rec.retencion ?? rec.Total_WTAmnt ?? null,
+          rec.neto ?? rec.LineTotal_Neto ?? null,
         ]
       );
 

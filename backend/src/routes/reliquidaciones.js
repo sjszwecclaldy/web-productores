@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
 
   try {
     const { rows } = await query(
-      `SELECT to_char(doc_date, 'YYYY-MM-DD') AS doc_date, doc_num, num_at_card, descripcion, line_total
+      `SELECT to_char(doc_date, 'YYYY-MM-DD') AS doc_date, doc_num, num_at_card, descripcion, line_total, retencion, neto
        FROM reliquidaciones
        WHERE ${conditions.join(' AND ')}
        ORDER BY doc_date DESC, doc_num DESC`,
@@ -43,7 +43,7 @@ router.get('/resumen', async (req, res) => {
 
   try {
     const ultima = await query(
-      `SELECT to_char(doc_date, 'YYYY-MM-DD') AS doc_date, doc_num, num_at_card, descripcion, line_total
+      `SELECT to_char(doc_date, 'YYYY-MM-DD') AS doc_date, doc_num, num_at_card, descripcion, line_total, retencion, neto
        FROM reliquidaciones
        WHERE card_code = $1
        ORDER BY doc_date DESC, doc_num DESC
@@ -53,6 +53,8 @@ router.get('/resumen', async (req, res) => {
 
     const totales = await query(
       `SELECT COALESCE(SUM(line_total), 0) AS total_importe,
+              COALESCE(SUM(retencion), 0) AS total_retencion,
+              COALESCE(SUM(neto), 0) AS total_neto,
               COUNT(*) AS reliquidaciones
        FROM reliquidaciones
        WHERE card_code = $1
