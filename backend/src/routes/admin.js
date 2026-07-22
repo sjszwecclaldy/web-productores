@@ -391,11 +391,47 @@ router.delete('/comunicados/:id', async (req, res) => {
 
 const INDICADORES_VALIDOS = ['litros', 'grasa', 'proteina', 'celulas', 'bacterias'];
 const DIRECCIONES_VALIDAS = ['arriba', 'abajo', 'ambos'];
+const TIPOS_VALIDOS = ['desvio', 'intervalo'];
+
+// Valida y normaliza el cuerpo de una regla (desvio o intervalo).
+function parseReglaBody(body) {
+  const { indicador, ventana_dias, umbral_pct, direccion, activa } = body || {};
+  if (!INDICADORES_VALIDOS.includes(indicador)) {
+    return { error: 'Indicador inválido' };
+  }
+  const tipo = TIPOS_VALIDOS.includes(body?.tipo) ? body.tipo : 'desvio';
+
+  if (tipo === 'intervalo') {
+    const min = body.limite_min === '' || body.limite_min == null ? null : Number(body.limite_min);
+    const max = body.limite_max === '' || body.limite_max == null ? null : Number(body.limite_max);
+    if ((min != null && !Number.isFinite(min)) || (max != null && !Number.isFinite(max))) {
+      return { error: 'Límites inválidos' };
+    }
+    if (min == null && max == null) {
+      return { error: 'Definí al menos un límite (mínimo o máximo)' };
+    }
+    if (min != null && max != null && min > max) {
+      return { error: 'El mínimo no puede ser mayor que el máximo' };
+    }
+    // ventana/umbral/direccion quedan con valores por defecto para intervalo.
+    return { value: { indicador, ventana: 4, umbral: 0, dir: 'ambos', activa: activa !== false, tipo, min, max } };
+  }
+
+  // tipo 'desvio'
+  const dir = DIRECCIONES_VALIDAS.includes(direccion) ? direccion : 'arriba';
+  const ventana = parseInt(ventana_dias, 10);
+  const umbral = Number(umbral_pct);
+  if (!Number.isInteger(ventana) || ventana < 1 || !Number.isFinite(umbral) || umbral <= 0) {
+    return { error: 'Ventana o umbral inválidos' };
+  }
+  return { value: { indicador, ventana, umbral, dir, activa: activa !== false, tipo, min: null, max: null } };
+}
 
 router.get('/control-reglas', async (_req, res) => {
   try {
     const { rows } = await query(
-      `SELECT id, indicador, ventana_dias, umbral_pct, direccion, activa
+      `SELECT id, indicador, ventana_dias, umbral_pct, direccion, activa,
+              tipo, limite_min, limite_max
        FROM control_reglas ORDER BY indicador ASC, id ASC`
     );
     res.json({ data: rows });
@@ -406,21 +442,14 @@ router.get('/control-reglas', async (_req, res) => {
 });
 
 router.post('/control-reglas', async (req, res) => {
-  const { indicador, ventana_dias, umbral_pct, direccion, activa } = req.body;
-  if (!INDICADORES_VALIDOS.includes(indicador)) {
-    return res.status(400).json({ error: 'Indicador inválido' });
-  }
-  const dir = DIRECCIONES_VALIDAS.includes(direccion) ? direccion : 'arriba';
-  const ventana = parseInt(ventana_dias, 10);
-  const umbral = Number(umbral_pct);
-  if (!Number.isInteger(ventana) || ventana < 1 || !Number.isFinite(umbral) || umbral <= 0) {
-    return res.status(400).json({ error: 'Ventana o umbral inválidos' });
-  }
+  const parsed = parseReglaBody(req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+  const p = parsed.value;
   try {
     const { rows } = await query(
-      `INSERT INTO control_reglas (indicador, ventana_dias, umbral_pct, direccion, activa)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [indicador, ventana, umbral, dir, activa !== false]
+      `INSERT INTO control_reglas (indicador, ventana_dias, umbral_pct, direccion, activa, tipo, limite_min, limite_max)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [p.indicador, p.ventana, p.umbral, p.dir, p.activa, p.tipo, p.min, p.max]
     );
     res.json({ ok: true, id: rows[0].id });
   } catch (err) {
@@ -432,22 +461,16 @@ router.post('/control-reglas', async (req, res) => {
 router.put('/control-reglas/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'id inválido' });
-  const { indicador, ventana_dias, umbral_pct, direccion, activa } = req.body;
-  if (!INDICADORES_VALIDOS.includes(indicador)) {
-    return res.status(400).json({ error: 'Indicador inválido' });
-  }
-  const dir = DIRECCIONES_VALIDAS.includes(direccion) ? direccion : 'arriba';
-  const ventana = parseInt(ventana_dias, 10);
-  const umbral = Number(umbral_pct);
-  if (!Number.isInteger(ventana) || ventana < 1 || !Number.isFinite(umbral) || umbral <= 0) {
-    return res.status(400).json({ error: 'Ventana o umbral inválidos' });
-  }
+  const parsed = parseReglaBody(req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+  const p = parsed.value;
   try {
     const { rowCount } = await query(
       `UPDATE control_reglas
-       SET indicador = $2, ventana_dias = $3, umbral_pct = $4, direccion = $5, activa = $6, updated_at = NOW()
+       SET indicador = $2, ventana_dias = $3, umbral_pct = $4, direccion = $5, activa = $6,
+           tipo = $7, limite_min = $8, limite_max = $9, updated_at = NOW()
        WHERE id = $1`,
-      [id, indicador, ventana, umbral, dir, activa !== false]
+      [id, p.indicador, p.ventana, p.umbral, p.dir, p.activa, p.tipo, p.min, p.max]
     );
     if (rowCount === 0) return res.status(404).json({ error: 'Regla no encontrada' });
     res.json({ ok: true });
@@ -479,7 +502,7 @@ router.get('/notificaciones', async (_req, res) => {
               valor, promedio, desvio_pct, direccion, mensaje, leida,
               to_char(created_at, 'YYYY-MM-DD HH24:MI') AS creado
        FROM notificaciones
-       ORDER BY leida ASC, created_at DESC
+       ORDER BY fecha DESC, created_at DESC
        LIMIT 200`
     );
     res.json({ data: rows });

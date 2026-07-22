@@ -198,6 +198,11 @@ CREATE TABLE IF NOT EXISTS control_reglas (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Tipo de regla: 'desvio' (vs promedio) o 'intervalo' (rango de aceptacion).
+ALTER TABLE control_reglas ADD COLUMN IF NOT EXISTS tipo TEXT NOT NULL DEFAULT 'desvio';
+ALTER TABLE control_reglas ADD COLUMN IF NOT EXISTS limite_min NUMERIC;
+ALTER TABLE control_reglas ADD COLUMN IF NOT EXISTS limite_max NUMERIC;
+
 CREATE TABLE IF NOT EXISTS notificaciones (
   id SERIAL PRIMARY KEY,
   card_code TEXT NOT NULL,

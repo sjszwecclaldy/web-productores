@@ -576,6 +576,23 @@ a {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.btn-danger {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+.btn-danger:hover {
+  background: #a93226;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .error-msg {
   background: #fdecea;
   color: var(--danger);

@@ -13,6 +13,7 @@ const INDICADORES = [
 const labelInd = (k) => INDICADORES.find((i) => i.key === k)?.label || k;
 
 // Indicador -> pantalla del productor donde ver el dato atípico.
+// calidad-sanitaria (no /calidad, que redirige a Composición).
 const SCREEN = {
   litros: '/remisiones',
   grasa: '/composicion',
@@ -21,7 +22,17 @@ const SCREEN = {
   bacterias: '/calidad-sanitaria',
 };
 
-const emptyFiltros = { productor: '', indicador: '', desde: '', hasta: '', estado: '' };
+// Texto del detalle: usa el mensaje del backend (sirve para desvío e intervalo);
+// si no hubiera, arma un resumen con valor vs promedio.
+function detalle(n) {
+  if (n.mensaje) return n.mensaje;
+  if (n.promedio != null && n.desvio_pct != null) {
+    return `${fmt(n.valor)} vs prom. ${fmt(n.promedio)} (${n.desvio_pct > 0 ? '+' : ''}${fmt(n.desvio_pct)}%)`;
+  }
+  return fmt(n.valor);
+}
+
+const emptyFiltros = { productor: '', indicador: '', desde: '', hasta: '' };
 
 export default function NotificacionesTab() {
   const navigate = useNavigate();
@@ -51,15 +62,16 @@ export default function NotificacionesTab() {
 
   const filtrados = useMemo(() => {
     const q = filtros.productor.trim().toLowerCase();
-    return items.filter((n) => {
-      if (q && !`${n.card_name || ''} ${n.card_code}`.toLowerCase().includes(q)) return false;
-      if (filtros.indicador && n.indicador !== filtros.indicador) return false;
-      if (filtros.desde && n.fecha < filtros.desde) return false;
-      if (filtros.hasta && n.fecha > filtros.hasta) return false;
-      if (filtros.estado === 'no_leidas' && n.leida) return false;
-      if (filtros.estado === 'leidas' && !n.leida) return false;
-      return true;
-    });
+    return items
+      .filter((n) => {
+        if (q && !`${n.card_name || ''} ${n.card_code}`.toLowerCase().includes(q)) return false;
+        if (filtros.indicador && n.indicador !== filtros.indicador) return false;
+        if (filtros.desde && n.fecha < filtros.desde) return false;
+        if (filtros.hasta && n.fecha > filtros.hasta) return false;
+        return true;
+      })
+      // Más reciente arriba (orden descendente por fecha).
+      .sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
   }, [items, filtros]);
 
   const allSelected = filtrados.length > 0 && filtrados.every((n) => sel.has(n.id));
@@ -81,12 +93,12 @@ export default function NotificacionesTab() {
     });
   }
 
-  async function accionMultiple(path) {
+  async function eliminarSeleccionadas() {
     const ids = [...sel];
     if (ids.length === 0) return;
     setError('');
     try {
-      await api(`/api/admin/notificaciones/${path}`, { method: 'POST', body: JSON.stringify({ ids }) });
+      await api('/api/admin/notificaciones/eliminar', { method: 'POST', body: JSON.stringify({ ids }) });
       await load();
     } catch (err) {
       setError(err.message);
@@ -129,28 +141,15 @@ export default function NotificacionesTab() {
           <label htmlFor="f-hasta">Hasta</label>
           <input id="f-hasta" type="date" value={filtros.hasta} onChange={setF('hasta')} />
         </div>
-        <div className="form-group">
-          <label htmlFor="f-est">Estado</label>
-          <select id="f-est" value={filtros.estado} onChange={setF('estado')}>
-            <option value="">Todas</option>
-            <option value="no_leidas">No leídas</option>
-            <option value="leidas">Leídas</option>
-          </select>
-        </div>
       </form>
 
       <div className="table-toolbar">
         <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
           {sel.size > 0 ? `${sel.size} seleccionada(s)` : `${filtrados.length} notificación(es)`}
         </span>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button type="button" className="btn btn-ghost" style={{ width: 'auto' }} disabled={sel.size === 0} onClick={() => accionMultiple('leer')}>
-            Marcar leídas
-          </button>
-          <button type="button" className="btn btn-ghost" style={{ width: 'auto', color: '#b3261e' }} disabled={sel.size === 0} onClick={() => accionMultiple('eliminar')}>
-            Eliminar seleccionadas
-          </button>
-        </div>
+        <button type="button" className="btn btn-danger" style={{ width: 'auto' }} disabled={sel.size === 0} onClick={eliminarSeleccionadas}>
+          Eliminar seleccionadas
+        </button>
       </div>
 
       <div className="table-wrap">
@@ -167,26 +166,18 @@ export default function NotificacionesTab() {
                 <th>Productor</th>
                 <th>Indicador</th>
                 <th>Detalle</th>
-                <th>Estado</th>
               </tr>
             </thead>
             <tbody>
               {filtrados.map((n) => (
-                <tr
-                  key={n.id}
-                  className={`clickable-row${n.leida ? '' : ' row-nueva'}`}
-                  onClick={() => irADato(n)}
-                >
+                <tr key={n.id} className="clickable-row" onClick={() => irADato(n)}>
                   <td onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" checked={sel.has(n.id)} onChange={() => toggleOne(n.id)} />
                   </td>
                   <td>{fmtDate(n.fecha)}</td>
                   <td>{n.card_name || n.card_code} <span className="muted-code">({n.card_code})</span></td>
                   <td>{labelInd(n.indicador)}</td>
-                  <td>
-                    {fmt(n.valor)} vs prom. {fmt(n.promedio)} ({n.desvio_pct > 0 ? '+' : ''}{fmt(n.desvio_pct)}%)
-                  </td>
-                  <td>{n.leida ? 'Leída' : <span className="badge badge--importante">Nueva</span>}</td>
+                  <td>{detalle(n)}</td>
                 </tr>
               ))}
             </tbody>

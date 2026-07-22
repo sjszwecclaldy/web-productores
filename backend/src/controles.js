@@ -34,7 +34,7 @@ async function evaluarControles(domain, cardCodes) {
   if (!indicadores || !cardCodes || cardCodes.length === 0) return;
 
   const { rows: reglas } = await pool.query(
-    `SELECT id, indicador, ventana_dias, umbral_pct, direccion
+    `SELECT id, indicador, ventana_dias, umbral_pct, direccion, tipo, limite_min, limite_max
      FROM control_reglas
      WHERE activa = TRUE AND indicador = ANY($1)`,
     [indicadores]
@@ -59,6 +59,56 @@ async function evaluarControles(domain, cardCodes) {
     for (const regla of reglas) {
       const ind = INDICADORES[regla.indicador];
       if (!ind) continue;
+
+      // --- Regla de intervalo: valor del dia fuera del rango [min, max] ---
+      if (regla.tipo === 'intervalo') {
+        const min = regla.limite_min != null ? Number(regla.limite_min) : null;
+        const max = regla.limite_max != null ? Number(regla.limite_max) : null;
+        if (min == null && max == null) continue;
+
+        let actual = null;
+        try {
+          const { rows } = await pool.query(
+            `SELECT ${ind.expr} AS v FROM ${ind.table}
+             WHERE card_code = $1 AND ${ind.dateCol} = $2`,
+            [cardCode, fecha]
+          );
+          actual = rows[0]?.v != null ? Number(rows[0].v) : null;
+        } catch (err) {
+          console.error('controles intervalo error:', err.message);
+          continue;
+        }
+        if (actual == null) continue;
+
+        const fuera = (min != null && actual < min) || (max != null && actual > max);
+        if (!fuera) continue;
+
+        const rango =
+          min != null && max != null ? `[${round2(min)}, ${round2(max)}]`
+          : min != null ? `≥ ${round2(min)}`
+          : `≤ ${round2(max)}`;
+        const uni = ind.unidad ? ' ' + ind.unidad : '';
+        const mensaje =
+          `${ind.label} de ${fecha}: ${round2(actual)}${uni} fuera del rango aceptable ${rango}.`;
+
+        try {
+          await pool.query(
+            `INSERT INTO notificaciones
+               (card_code, card_name, indicador, fecha, valor, promedio, desvio_pct, direccion, regla_id, mensaje)
+             SELECT $1, (SELECT card_name FROM productores WHERE card_code = $1),
+                    $2, $3, $4, NULL, NULL, 'fuera', $5, $6
+             ON CONFLICT (card_code, indicador, fecha)
+             DO UPDATE SET valor = EXCLUDED.valor, promedio = NULL, desvio_pct = NULL,
+               direccion = 'fuera', regla_id = EXCLUDED.regla_id, mensaje = EXCLUDED.mensaje,
+               leida = FALSE, created_at = NOW()`,
+            [cardCode, regla.indicador, fecha, round2(actual), regla.id, mensaje]
+          );
+        } catch (err) {
+          console.error('controles insert error:', err.message);
+        }
+        continue;
+      }
+
       const ventana = parseInt(regla.ventana_dias, 10) || 4;
       const umbral = Number(regla.umbral_pct) || 0;
 

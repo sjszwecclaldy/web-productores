@@ -15,10 +15,38 @@ const DIRECCIONES = [
   { key: 'ambos', label: 'Ambos' },
 ];
 
+const TIPOS = [
+  { key: 'desvio', label: 'Desvío vs promedio' },
+  { key: 'intervalo', label: 'Intervalo de aceptación' },
+];
+
 const labelInd = (k) => INDICADORES.find((i) => i.key === k)?.label || k;
 const labelDir = (k) => DIRECCIONES.find((d) => d.key === k)?.label || k;
+const labelTipo = (k) => TIPOS.find((t) => t.key === k)?.label || k;
 
-const emptyForm = { indicador: 'litros', ventana_dias: 4, umbral_pct: 15, direccion: 'arriba', activa: true };
+const emptyForm = {
+  indicador: 'litros',
+  tipo: 'desvio',
+  ventana_dias: 4,
+  umbral_pct: 15,
+  direccion: 'arriba',
+  limite_min: '',
+  limite_max: '',
+  activa: true,
+};
+
+// Resumen legible de los parámetros de una regla, según su tipo.
+function paramsResumen(r) {
+  if (r.tipo === 'intervalo') {
+    const min = r.limite_min != null ? r.limite_min : null;
+    const max = r.limite_max != null ? r.limite_max : null;
+    if (min != null && max != null) return `Aceptable entre ${min} y ${max}`;
+    if (min != null) return `Aceptable ≥ ${min}`;
+    if (max != null) return `Aceptable ≤ ${max}`;
+    return '—';
+  }
+  return `${labelDir(r.direccion)} · ${r.umbral_pct}% · ventana ${r.ventana_dias}`;
+}
 
 export default function FiltrosTab() {
   const [reglas, setReglas] = useState([]);
@@ -56,9 +84,12 @@ export default function FiltrosTab() {
     setEditId(r.id);
     setForm({
       indicador: r.indicador,
+      tipo: r.tipo || 'desvio',
       ventana_dias: r.ventana_dias,
       umbral_pct: r.umbral_pct,
       direccion: r.direccion,
+      limite_min: r.limite_min != null ? r.limite_min : '',
+      limite_max: r.limite_max != null ? r.limite_max : '',
       activa: r.activa,
     });
     setShowForm(true);
@@ -69,13 +100,15 @@ export default function FiltrosTab() {
     setError('');
     setSaving(true);
     try {
-      const payload = {
-        indicador: form.indicador,
-        ventana_dias: Number(form.ventana_dias),
-        umbral_pct: Number(form.umbral_pct),
-        direccion: form.direccion,
-        activa: form.activa,
-      };
+      const payload = { indicador: form.indicador, tipo: form.tipo, activa: form.activa };
+      if (form.tipo === 'intervalo') {
+        payload.limite_min = form.limite_min === '' ? null : Number(form.limite_min);
+        payload.limite_max = form.limite_max === '' ? null : Number(form.limite_max);
+      } else {
+        payload.ventana_dias = Number(form.ventana_dias);
+        payload.umbral_pct = Number(form.umbral_pct);
+        payload.direccion = form.direccion;
+      }
       if (editId) {
         await api(`/api/admin/control-reglas/${editId}`, { method: 'PUT', body: JSON.stringify(payload) });
       } else {
@@ -110,8 +143,10 @@ export default function FiltrosTab() {
   return (
     <>
       <p style={{ color: 'var(--muted)', marginTop: 0 }}>
-        Las reglas comparan cada dato nuevo contra el promedio de las últimas N mediciones del productor.
-        Si el desvío supera el umbral, se genera una notificación.
+        Las reglas generan una notificación cuando un dato se aparta de lo esperado. Hay dos tipos:
+        <strong> desvío vs promedio</strong> (compara cada dato con el promedio de las últimas N mediciones
+        del productor) e <strong>intervalo de aceptación</strong> (marca los datos que caen fuera de un
+        rango de valores aceptables).
       </p>
 
       {error && <div className="error-msg">{error}</div>}
@@ -138,22 +173,51 @@ export default function FiltrosTab() {
               </select>
             </div>
             <div className="form-group">
-              <label htmlFor="r-dir">Dirección</label>
-              <select id="r-dir" value={form.direccion} onChange={update('direccion')}>
-                {DIRECCIONES.map((d) => (
-                  <option key={d.key} value={d.key}>{d.label}</option>
+              <label htmlFor="r-tipo">Tipo de regla</label>
+              <select id="r-tipo" value={form.tipo} onChange={update('tipo')}>
+                {TIPOS.map((t) => (
+                  <option key={t.key} value={t.key}>{t.label}</option>
                 ))}
               </select>
             </div>
-            <div className="form-group">
-              <label htmlFor="r-vent">Ventana (N últimas mediciones)</label>
-              <input id="r-vent" type="number" min="1" value={form.ventana_dias} onChange={update('ventana_dias')} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="r-umb">Umbral (%)</label>
-              <input id="r-umb" type="number" min="1" step="0.1" value={form.umbral_pct} onChange={update('umbral_pct')} />
-            </div>
           </div>
+
+          {form.tipo === 'intervalo' ? (
+            <div className="cards-grid">
+              <div className="form-group">
+                <label htmlFor="r-min">Límite mínimo aceptable</label>
+                <input id="r-min" type="number" step="any" placeholder="(sin mínimo)" value={form.limite_min} onChange={update('limite_min')} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="r-max">Límite máximo aceptable</label>
+                <input id="r-max" type="number" step="any" placeholder="(sin máximo)" value={form.limite_max} onChange={update('limite_max')} />
+              </div>
+              <p style={{ color: 'var(--muted)', fontSize: '0.85rem', gridColumn: '1 / -1', margin: 0 }}>
+                Los datos dentro del rango se consideran aceptables. Los que caen por fuera generan
+                notificación. Podés dejar un límite vacío para acotar solo por un lado.
+              </p>
+            </div>
+          ) : (
+            <div className="cards-grid">
+              <div className="form-group">
+                <label htmlFor="r-dir">Dirección</label>
+                <select id="r-dir" value={form.direccion} onChange={update('direccion')}>
+                  {DIRECCIONES.map((d) => (
+                    <option key={d.key} value={d.key}>{d.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="r-vent">Ventana (N últimas mediciones)</label>
+                <input id="r-vent" type="number" min="1" value={form.ventana_dias} onChange={update('ventana_dias')} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="r-umb">Umbral (%)</label>
+                <input id="r-umb" type="number" min="1" step="0.1" value={form.umbral_pct} onChange={update('umbral_pct')} />
+              </div>
+            </div>
+          )}
+
           <div className="form-group">
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input type="checkbox" checked={form.activa} onChange={(e) => setForm((s) => ({ ...s, activa: e.target.checked }))} style={{ width: 'auto' }} />
@@ -179,9 +243,8 @@ export default function FiltrosTab() {
             <thead>
               <tr>
                 <th>Indicador</th>
-                <th>Dirección</th>
-                <th className="num">Ventana</th>
-                <th className="num">Umbral</th>
+                <th>Tipo</th>
+                <th>Parámetros</th>
                 <th>Estado</th>
                 <th className="num">Acciones</th>
               </tr>
@@ -190,9 +253,8 @@ export default function FiltrosTab() {
               {reglas.map((r) => (
                 <tr key={r.id}>
                   <td>{labelInd(r.indicador)}</td>
-                  <td>{labelDir(r.direccion)}</td>
-                  <td className="num">{r.ventana_dias}</td>
-                  <td className="num">{r.umbral_pct}%</td>
+                  <td>{labelTipo(r.tipo)}</td>
+                  <td>{paramsResumen(r)}</td>
                   <td>{r.activa ? 'Activa' : 'Inactiva'}</td>
                   <td className="num">
                     <button type="button" className="btn btn-ghost" style={{ width: 'auto', padding: '0.25rem 0.6rem' }} onClick={() => openEdit(r)}>Editar</button>{' '}
