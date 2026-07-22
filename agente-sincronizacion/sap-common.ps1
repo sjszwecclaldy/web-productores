@@ -221,13 +221,20 @@ function Get-SapRecords {
     $records = New-Object System.Collections.ArrayList
     $baseUrl = $SapBaseUrl.TrimEnd('/')
     $serviceRoot = "$baseUrl/sml.svc"
-    $selectClause = ($SelectFields -join ',')
-    $url = "$serviceRoot/$SapService" + '?$select=' + $selectClause
+    $url = "$serviceRoot/$SapService"
+    $sep = '?'
+    # SelectFields vacio => se pide la vista completa (sin $select). Necesario para
+    # vistas semanticas con medidas numericas que fallan ante un $select parcial.
+    if ($null -ne $SelectFields -and $SelectFields.Count -gt 0) {
+        $url = $url + $sep + '$select=' + ($SelectFields -join ',')
+        $sep = '&'
+    }
     # Dominios "snapshot" (sin campo de fecha) traen la tabla completa sin $filter.
     if ($null -ne $DateField -and $DateField -ne '') {
         $filterValue = "$DateField ge '$FromDate'"
         $filterEncoded = [uri]::EscapeDataString($filterValue)
-        $url = $url + '&$filter=' + $filterEncoded
+        $url = $url + $sep + '$filter=' + $filterEncoded
+        $sep = '&'
     }
     $firstRequest = $true
     $page = 0

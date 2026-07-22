@@ -155,10 +155,9 @@ $Domains = @(
         SapService  = 'VENCIMIENTO'
         DateField   = ''
         IngestPath  = '/internal/ingest/vencimientos'
-        SelectFields = @(
-            'CardCode', 'CardName', 'E_Mail', 'Phone1',
-            'U_VENC_REFRE', 'U_DICOSE', 'validFor', 'GroupCode'
-        )
+        # Vacio a proposito: la vista semantica VENCIMIENTO falla con $select parcial
+        # (HANA 339). Se trae completa, igual que en Postman; el Transform elige campos.
+        SelectFields = @()
         Transform = {
             param($Row)
             @{
