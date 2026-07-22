@@ -1,9 +1,19 @@
 export const CHART_COLORS = {
   primary: '#1a5c35',
-  accent: '#2d8c52',
-  gold: '#b8973a',
+  accent: '#1a6fa8',
+  gold: '#c4891a',
   muted: '#ccddd4',
 };
+
+// Paleta de alto contraste para series de líneas (años, productores, etc.).
+export const LINE_COLORS = [
+  '#1a5c35', // verde
+  '#1a6fa8', // azul
+  '#c4891a', // dorado
+  '#b33b2e', // rojo
+  '#0d7377', // teal
+  '#6b4f2a', // marrón
+];
 
 /** Dominio fijo del eje Y para % grasa / proteína. */
 export const DOMAIN_GRASA_PROTEINA = [2, 6];

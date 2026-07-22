@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { avgCalidadByDate, formatChartDate, groupSumByDate } from '../chartUtils';
+import { avgCalidadByDate, CHART_COLORS, formatChartDate, groupSumByDate } from '../chartUtils';
 import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
@@ -197,13 +197,13 @@ export default function Resumen() {
           <ChartPanel title="Evolución células somáticas">
             <CalidadLineChart
               data={sanitariaSerie}
-              series={[{ key: 'celulas', label: 'Cél. somáticas', color: '#1a5c35' }]}
+              series={[{ key: 'celulas', label: 'Cél. somáticas', color: CHART_COLORS.primary }]}
             />
           </ChartPanel>
           <ChartPanel title="Evolución recuento bacteriano">
             <CalidadLineChart
               data={sanitariaSerie}
-              series={[{ key: 'bacterias', label: 'Recuento bact.', color: '#2d8c52' }]}
+              series={[{ key: 'bacterias', label: 'Recuento bact.', color: CHART_COLORS.accent }]}
             />
           </ChartPanel>
         </div>

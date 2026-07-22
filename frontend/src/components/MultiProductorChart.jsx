@@ -12,15 +12,15 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext, useMemo } from 'react';
-import { CHART_COLORS, domainCentered, formatMonthYear } from '../chartUtils';
+import { CHART_COLORS, LINE_COLORS, domainCentered, formatMonthYear } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
 const TOP_LINEAS = 5;
 
-// Color estable por ranking del productor (0 = mayor total).
+// Color estable por ranking del productor (paleta de alto contraste).
 function colorFor(rank) {
-  return `hsl(${(rank * 47) % 360} 55% 45%)`;
+  return LINE_COLORS[rank % LINE_COLORS.length];
 }
 
 // Líneas mensuales (solo top 5 productores por total) + promedio del grupo opcional.

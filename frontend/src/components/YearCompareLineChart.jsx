@@ -9,11 +9,9 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { CHART_COLORS, collectChartValues, domainCentered } from '../chartUtils';
+import { LINE_COLORS, collectChartValues, domainCentered } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
-
-const YEAR_COLORS = [CHART_COLORS.primary, CHART_COLORS.accent, CHART_COLORS.gold, '#8a6d3b', '#5a6d62'];
 
 // Comparación de años: una línea por año, eje X = meses (Ene–Dic).
 export default function YearCompareLineChart({
@@ -34,7 +32,7 @@ export default function YearCompareLineChart({
   return (
     <ResponsiveContainer width="100%" height={ctxHeight ?? 300}>
       <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#ccddd4" vertical={false} />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#5a6d62' }} />
         <YAxis domain={domain} tick={{ fontSize: 11, fill: '#5a6d62' }} width={56} allowDataOverflow />
         <Tooltip
@@ -48,8 +46,8 @@ export default function YearCompareLineChart({
             type="monotone"
             dataKey={year}
             name={String(year)}
-            stroke={YEAR_COLORS[i % YEAR_COLORS.length]}
-            strokeWidth={2}
+            stroke={LINE_COLORS[i % LINE_COLORS.length]}
+            strokeWidth={2.25}
             dot={{ r: 3 }}
             activeDot={{ r: 5 }}
             connectNulls

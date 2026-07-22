@@ -106,7 +106,7 @@ export default function CalidadLineChart({
             type="monotone"
             dataKey={key}
             stroke={color}
-            strokeWidth={2}
+            strokeWidth={2.25}
             dot={renderDot(color, selectedDate, onDateSelect)}
             activeDot={false}
             connectNulls
