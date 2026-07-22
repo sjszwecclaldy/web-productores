@@ -20,12 +20,18 @@ const EXPORT_COLS = [
   { header: 'Fecha', value: (r) => fmtDate(r.doc_date) },
   { header: 'Referencia', value: (r) => r.num_at_card },
   { header: 'Litros', value: (r) => r.cantidad },
-  { header: 'Total', value: (r) => r.total },
+  { header: 'Importe Bruto', value: (r) => r.total },
   { header: 'IMEBA', value: (r) => r.imeba },
   { header: 'INIA', value: (r) => r.inia },
-  { header: 'Aftosa (USD)', value: (r) => r.aftosa_usd },
-  { header: 'Enferm. (USD)', value: (r) => r.enferm_usd },
+  { header: 'Aftosa', value: (r) => r.aftosa_usd },
+  { header: 'Enfermedades', value: (r) => r.enferm_usd },
+  { header: 'Importe Neto', value: (r) => calcImporteNeto(r) },
 ];
+
+function calcImporteNeto(r) {
+  const n = (v) => Number(v) || 0;
+  return n(r.total) - n(r.imeba) - n(r.inia) - n(r.aftosa_usd) - n(r.enferm_usd);
+}
 
 function LiqRow({ r }) {
   return (
@@ -123,10 +129,7 @@ export default function Liquidaciones() {
   }
 
   const ultima = selectedMonth ? selectedRows[0] || null : registros[0] || null;
-  const n = (v) => Number(v) || 0;
-  const importeNeto = ultima
-    ? n(ultima.total) - n(ultima.imeba) - n(ultima.inia) - n(ultima.aftosa_usd) - n(ultima.enferm_usd)
-    : null;
+  const importeNeto = ultima ? calcImporteNeto(ultima) : null;
 
   return (
     <div className="layout">
@@ -154,12 +157,12 @@ export default function Liquidaciones() {
                   {ultima.num_at_card && ` · Ref. ${ultima.num_at_card}`}
                 </p>
                 <div className="stat-row"><span>Litros</span><span className="value">{fmt(ultima.cantidad)}</span></div>
-                <div className="stat-row"><span>Importe total bruto</span><span className="value">{fmt(ultima.total)}</span></div>
+                <div className="stat-row"><span>Importe Bruto</span><span className="value">{fmt(ultima.total)}</span></div>
                 <div className="stat-row"><span>IMEBA</span><span className="value">{fmt(ultima.imeba)}</span></div>
                 <div className="stat-row"><span>INIA</span><span className="value">{fmt(ultima.inia)}</span></div>
-                <div className="stat-row"><span>Aftosa (USD)</span><span className="value">{fmt(ultima.aftosa_usd)}</span></div>
-                <div className="stat-row"><span>Enfermedades (USD)</span><span className="value">{fmt(ultima.enferm_usd)}</span></div>
-                <div className="stat-row"><span>Importe neto</span><span className="value">{fmt(importeNeto)}</span></div>
+                <div className="stat-row"><span>Aftosa</span><span className="value">{fmt(ultima.aftosa_usd)}</span></div>
+                <div className="stat-row"><span>Enfermedades</span><span className="value">{fmt(ultima.enferm_usd)}</span></div>
+                <div className="stat-row"><span>Importe Neto</span><span className="value">{fmt(importeNeto)}</span></div>
               </>
             ) : (
               <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
@@ -167,12 +170,12 @@ export default function Liquidaciones() {
           </div>
         </div>
 
-        <ChartPanel title="Importe por mes">
+        <ChartPanel title="Importe Bruto por mes">
           <MonthlyBarChart
             data={chartMonthly}
             selectedMonth={selectedMonth}
             onMonthSelect={handleMonthSelect}
-            bars={[{ key: 'importe', label: 'Importe', color: '#1a5c35' }]}
+            bars={[{ key: 'importe', label: 'Importe Bruto', color: '#1a5c35' }]}
           />
         </ChartPanel>
 
@@ -186,12 +189,13 @@ export default function Liquidaciones() {
                     <th>Fecha</th>
                     <th>Referencia</th>
                     <th className="num">Litros</th>
-                    <th className="num">Total</th>
+                    <th className="num">Importe Bruto</th>
                     <th className="num">IMEBA</th>
                     <th className="num">INIA</th>
-                    <th className="num">Aftosa (USD)</th>
-                    <th className="num">Enferm. (USD)</th>
+                    <th className="num">Aftosa</th>
+                    <th className="num">Enfermedades</th>
                     <th>Estado</th>
+                    <th className="num">Importe Neto</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -199,6 +203,7 @@ export default function Liquidaciones() {
                     <tr key={`mc-${r.num_at_card}-${r.doc_date}-${i}`}>
                       <LiqRow r={r} />
                       <td><span className="badge badge--pendiente">Pendiente de validación</span></td>
+                      <td className="num">{fmt(calcImporteNeto(r))}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -225,17 +230,19 @@ export default function Liquidaciones() {
                   <th>Fecha</th>
                   <th>Referencia</th>
                   <th className="num">Litros</th>
-                  <th className="num">Total</th>
+                  <th className="num">Importe Bruto</th>
                   <th className="num">IMEBA</th>
                   <th className="num">INIA</th>
-                  <th className="num">Aftosa (USD)</th>
-                  <th className="num">Enferm. (USD)</th>
+                  <th className="num">Aftosa</th>
+                  <th className="num">Enfermedades</th>
+                  <th className="num">Importe Neto</th>
                 </tr>
               </thead>
               <tbody>
                 {historico.map((r, i) => (
                   <tr key={`${r.num_at_card}-${r.doc_date}-${i}`}>
                     <LiqRow r={r} />
+                    <td className="num">{fmt(calcImporteNeto(r))}</td>
                   </tr>
                 ))}
               </tbody>
