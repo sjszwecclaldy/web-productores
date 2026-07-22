@@ -12,6 +12,8 @@ import LoadingScreen from '../components/LoadingScreen';
 import PeriodFilter from '../components/PeriodFilter';
 import QualityGauge from '../components/QualityGauge';
 import YearCompareLineChart from '../components/YearCompareLineChart';
+import VerMasButton from '../components/VerMasButton';
+import { useColapsable } from '../hooks/useColapsable';
 
 const EXPORT_COLS = [
   { header: 'Fecha', value: (r) => fmtDate(r.lab_date) },
@@ -114,6 +116,8 @@ export default function Calidad() {
     () => registros.filter((r) => !isCurrentMonth(r.lab_date)),
     [registros]
   );
+
+  const { visibles, restantes, abierto, toggle } = useColapsable(historico, 10);
 
   if (loading) {
     return <LoadingScreen />;
@@ -224,7 +228,7 @@ export default function Calidad() {
                 </tr>
               </thead>
               <tbody>
-                {historico.map((r, i) => (
+                {visibles.map((r, i) => (
                   <tr
                     key={`${r.lab_date}-${i}`}
                     className={highlight && String(r.lab_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
@@ -238,6 +242,7 @@ export default function Calidad() {
             </table>
           )}
         </div>
+        <VerMasButton abierto={abierto} restantes={restantes} onToggle={toggle} />
       </main>
     </div>
   );

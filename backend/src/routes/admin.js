@@ -41,6 +41,7 @@ function defaultDesde() {
 router.get('/dashboard', async (req, res) => {
   const desde = req.query.desde || defaultDesde();
   const hasta = req.query.hasta || null;
+  const grupoId = Number.isInteger(parseInt(req.query.grupo_id, 10)) ? parseInt(req.query.grupo_id, 10) : null;
 
   try {
     const productoresQ = await query(
@@ -96,57 +97,36 @@ router.get('/dashboard', async (req, res) => {
        LEFT JOIN liq ON liq.card_code = p.card_code
        LEFT JOIN san ON san.card_code = p.card_code
        WHERE p.role = 'productor'
+         AND ($3::int IS NULL OR p.card_code IN (SELECT card_code FROM grupo_productores WHERE grupo_id = $3))
        ORDER BY litros DESC`,
-      [desde, hasta]
-    );
-
-    const calidadGlobalQ = await query(
-      `SELECT AVG(fat) AS grasa, AVG(protein) AS proteina,
-              AVG(lactose) AS lactosa, AVG(ts) AS solidos
-       FROM calidad_composicion
-       WHERE collection_date >= $1 AND ($2::date IS NULL OR collection_date <= $2)`,
-      [desde, hasta]
-    );
-
-    const sanitariaGlobalQ = await query(
-      `SELECT AVG(celulas) AS celulas, AVG(bacterias) AS bacterias
-       FROM calidad_sanitaria
-       WHERE lab_date >= $1 AND ($2::date IS NULL OR lab_date <= $2)`,
-      [desde, hasta]
-    );
-
-    const recientesQ = await query(
-      `SELECT to_char(r.doc_date, 'YYYY-MM-DD') AS doc_date, r.doc_num,
-              r.card_code, p.card_name, r.quantity AS litros
-       FROM remisiones r
-       JOIN productores p ON p.card_code = r.card_code
-       ORDER BY r.doc_date DESC, r.doc_entry DESC
-       LIMIT 10`
+      [desde, hasta, grupoId]
     );
 
     const productores = productoresQ.rows;
     const num = (v) => Number(v) || 0;
-    const g = calidadGlobalQ.rows[0] || {};
-    const s = sanitariaGlobalQ.rows[0] || {};
+    // Promedios de calidad calculados sobre el grupo filtrado (promedio de promedios por productor).
+    const avgOf = (key) => {
+      const vals = productores.map((p) => p[key]).filter((v) => v != null).map(Number);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    };
 
     const kpis = {
       productores_con_datos: productores.filter((p) => num(p.entregas) > 0).length,
       total_litros: productores.reduce((s, p) => s + num(p.litros), 0),
       total_entregas: productores.reduce((s, p) => s + num(p.entregas), 0),
       total_importe_liquidado: productores.reduce((s, p) => s + num(p.importe_liquidado), 0),
-      promedio_grasa: g.grasa,
-      promedio_proteina: g.proteina,
-      promedio_lactosa: g.lactosa,
-      promedio_solidos: g.solidos,
-      promedio_celulas: s.celulas,
-      promedio_bacterias: s.bacterias,
+      promedio_grasa: avgOf('grasa'),
+      promedio_proteina: avgOf('proteina'),
+      promedio_lactosa: avgOf('lactosa'),
+      promedio_solidos: avgOf('solidos'),
+      promedio_celulas: avgOf('celulas'),
+      promedio_bacterias: avgOf('bacterias'),
     };
 
     res.json({
       periodo: { desde, hasta },
       kpis,
       productores,
-      recientes: recientesQ.rows,
     });
   } catch (err) {
     console.error('admin dashboard error:', err);
@@ -560,6 +540,123 @@ router.post('/notificaciones/leer', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('notificaciones bulk read error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// --- Grupos personalizados (Comparativa) ---
+
+router.get('/grupos', async (_req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT g.id, g.nombre,
+              COALESCE(array_agg(gp.card_code ORDER BY gp.card_code) FILTER (WHERE gp.card_code IS NOT NULL), '{}') AS card_codes
+       FROM grupos g
+       LEFT JOIN grupo_productores gp ON gp.grupo_id = g.id
+       GROUP BY g.id
+       ORDER BY g.nombre ASC`
+    );
+    res.json({ data: rows });
+  } catch (err) {
+    console.error('grupos list error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.post('/grupos', async (req, res) => {
+  const nombre = String(req.body?.nombre || '').trim();
+  if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
+  try {
+    const { rows } = await query('INSERT INTO grupos (nombre) VALUES ($1) RETURNING id', [nombre]);
+    res.json({ ok: true, id: rows[0].id });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Ya existe un grupo con ese nombre' });
+    console.error('grupos create error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.put('/grupos/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'id inválido' });
+  const nombre = String(req.body?.nombre || '').trim();
+  if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
+  const cardCodes = Array.isArray(req.body?.card_codes)
+    ? req.body.card_codes.map((c) => String(c).trim()).filter(Boolean)
+    : [];
+  try {
+    const upd = await query('UPDATE grupos SET nombre = $2 WHERE id = $1', [id, nombre]);
+    if (upd.rowCount === 0) return res.status(404).json({ error: 'Grupo no encontrado' });
+    await query('DELETE FROM grupo_productores WHERE grupo_id = $1', [id]);
+    if (cardCodes.length > 0) {
+      await query(
+        `INSERT INTO grupo_productores (grupo_id, card_code)
+         SELECT $1, cc FROM unnest($2::text[]) AS cc
+         ON CONFLICT DO NOTHING`,
+        [id, cardCodes]
+      );
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Ya existe un grupo con ese nombre' });
+    console.error('grupos update error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.delete('/grupos/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'id inválido' });
+  try {
+    const { rowCount } = await query('DELETE FROM grupos WHERE id = $1', [id]);
+    if (rowCount === 0) return res.status(404).json({ error: 'Grupo no encontrado' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('grupos delete error:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// Series mensuales para las gráficas de la Comparativa, filtradas por grupo (o todos).
+router.get('/comparativa-series', async (req, res) => {
+  const desde = req.query.desde || defaultDesde();
+  const hasta = req.query.hasta || null;
+  const grupoId = Number.isInteger(parseInt(req.query.grupo_id, 10)) ? parseInt(req.query.grupo_id, 10) : null;
+  const p = [desde, hasta, grupoId];
+
+  const grupoClause =
+    '($3::int IS NULL OR card_code IN (SELECT card_code FROM grupo_productores WHERE grupo_id = $3))';
+
+  const serie = async (sql) => (await query(sql, p)).rows.map((r) => ({ mes: r.mes, valor: r.valor != null ? Number(r.valor) : null }));
+
+  try {
+    const litros = await serie(
+      `SELECT to_char(doc_date, 'YYYY-MM') AS mes, SUM(quantity) AS valor
+       FROM remisiones
+       WHERE doc_date >= $1 AND ($2::date IS NULL OR doc_date <= $2) AND ${grupoClause}
+       GROUP BY 1 ORDER BY 1`
+    );
+    const celulas = await serie(
+      `SELECT to_char(lab_date, 'YYYY-MM') AS mes, AVG(celulas) AS valor
+       FROM calidad_sanitaria
+       WHERE lab_date >= $1 AND ($2::date IS NULL OR lab_date <= $2) AND ${grupoClause}
+       GROUP BY 1 ORDER BY 1`
+    );
+    const bacterias = await serie(
+      `SELECT to_char(lab_date, 'YYYY-MM') AS mes, AVG(bacterias) AS valor
+       FROM calidad_sanitaria
+       WHERE lab_date >= $1 AND ($2::date IS NULL OR lab_date <= $2) AND ${grupoClause}
+       GROUP BY 1 ORDER BY 1`
+    );
+    const liquidacion_bruta = await serie(
+      `SELECT to_char(doc_date, 'YYYY-MM') AS mes, SUM(total) AS valor
+       FROM liquidaciones
+       WHERE doc_date >= $1 AND ($2::date IS NULL OR doc_date <= $2) AND ${grupoClause}
+       GROUP BY 1 ORDER BY 1`
+    );
+    res.json({ periodo: { desde, hasta }, series: { litros, celulas, bacterias, liquidacion_bruta } });
+  } catch (err) {
+    console.error('comparativa-series error:', err);
     res.status(500).json({ error: 'Error interno' });
   }
 });

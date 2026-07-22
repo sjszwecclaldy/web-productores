@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, setAdminProducer } from '../api';
 import { fmt, fmtDate } from '../utils';
+import VerMasButton from '../components/VerMasButton';
+import { useColapsable } from '../hooks/useColapsable';
 
 const INDICADORES = [
   { key: 'litros', label: 'Litros' },
@@ -73,6 +75,8 @@ export default function NotificacionesTab() {
       // Más reciente arriba (orden descendente por fecha).
       .sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
   }, [items, filtros]);
+
+  const { visibles, restantes, abierto, toggle } = useColapsable(filtrados, 10);
 
   const allSelected = filtrados.length > 0 && filtrados.every((n) => sel.has(n.id));
 
@@ -169,7 +173,7 @@ export default function NotificacionesTab() {
               </tr>
             </thead>
             <tbody>
-              {filtrados.map((n) => (
+              {visibles.map((n) => (
                 <tr key={n.id} className="clickable-row" onClick={() => irADato(n)}>
                   <td onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" checked={sel.has(n.id)} onChange={() => toggleOne(n.id)} />
@@ -184,6 +188,7 @@ export default function NotificacionesTab() {
           </table>
         )}
       </div>
+      <VerMasButton abierto={abierto} restantes={restantes} onToggle={toggle} />
     </>
   );
 }

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import VerMasButton from '../components/VerMasButton';
+import { useColapsable } from '../hooks/useColapsable';
 
 const INDICADORES = [
   { key: 'litros', label: 'Litros' },
@@ -71,6 +73,8 @@ export default function FiltrosTab() {
   useEffect(() => {
     load();
   }, []);
+
+  const { visibles, restantes, abierto, toggle } = useColapsable(reglas, 10);
 
   const update = (f) => (e) => setForm((s) => ({ ...s, [f]: e.target.value }));
 
@@ -250,7 +254,7 @@ export default function FiltrosTab() {
               </tr>
             </thead>
             <tbody>
-              {reglas.map((r) => (
+              {visibles.map((r) => (
                 <tr key={r.id}>
                   <td>{labelInd(r.indicador)}</td>
                   <td>{labelTipo(r.tipo)}</td>
@@ -266,6 +270,7 @@ export default function FiltrosTab() {
           </table>
         )}
       </div>
+      <VerMasButton abierto={abierto} restantes={restantes} onToggle={toggle} />
     </>
   );
 }

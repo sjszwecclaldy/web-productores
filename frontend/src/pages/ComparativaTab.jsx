@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import { CHART_COLORS } from '../chartUtils';
 import { fmt, fmtDate } from '../utils';
 import ChartPanel from '../components/ChartPanel';
 import KpiCard from '../components/KpiCard';
-import RankingBarChart from '../components/RankingBarChart';
+import SerieMensualChart from '../components/SerieMensualChart';
+import VerMasButton from '../components/VerMasButton';
+import { useColapsable } from '../hooks/useColapsable';
 
 const PERIODOS = [
   { dias: 30, label: '30 días' },
@@ -36,6 +38,7 @@ function desdeDias(dias) {
 export default function ComparativaTab() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const [series, setSeries] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [dias, setDias] = useState(90);
@@ -44,6 +47,23 @@ export default function ComparativaTab() {
   const [rango, setRango] = useState(null);
   const [sortKey, setSortKey] = useState('litros');
   const [sortDir, setSortDir] = useState('desc');
+
+  const [grupos, setGrupos] = useState([]);
+  const [grupoSel, setGrupoSel] = useState(''); // '' = todos
+  const [showModal, setShowModal] = useState(false);
+
+  const cargarGrupos = useCallback(async () => {
+    try {
+      const res = await api('/api/admin/grupos');
+      setGrupos(res.data || []);
+    } catch (err) {
+      setError(err.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    cargarGrupos();
+  }, [cargarGrupos]);
 
   useEffect(() => {
     async function load() {
@@ -57,8 +77,14 @@ export default function ComparativaTab() {
         } else {
           params.set('desde', desdeDias(dias));
         }
-        const res = await api(`/api/admin/dashboard?${params.toString()}`);
+        if (grupoSel) params.set('grupo_id', grupoSel);
+        const qs = params.toString();
+        const [res, ser] = await Promise.all([
+          api(`/api/admin/dashboard?${qs}`),
+          api(`/api/admin/comparativa-series?${qs}`),
+        ]);
         setData(res);
+        setSeries(ser.series);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -71,7 +97,7 @@ export default function ComparativaTab() {
       }
     }
     load();
-  }, [dias, rango, navigate]);
+  }, [dias, rango, grupoSel, navigate]);
 
   function aplicarRango(e) {
     e.preventDefault();
@@ -114,30 +140,32 @@ export default function ComparativaTab() {
     return rows;
   }, [productores, sortKey, sortDir]);
 
-  const top10Litros = useMemo(
-    () => [...productores].sort((a, b) => Number(b.litros) - Number(a.litros)).slice(0, 10),
-    [productores]
-  );
-
-  const top10Grasa = useMemo(
-    () =>
-      [...productores]
-        .filter((p) => Number(p.muestras) > 0 && p.grasa != null)
-        .sort((a, b) => Number(b.grasa) - Number(a.grasa))
-        .slice(0, 10),
-    [productores]
-  );
+  const { visibles, restantes, abierto, toggle } = useColapsable(tabla, 10);
 
   if (loading && !data) {
     return <div className="empty-state">Cargando…</div>;
   }
 
   const kpis = data?.kpis;
-  const recientes = data?.recientes || [];
 
   return (
     <>
       {error && <div className="error-msg">{error}</div>}
+
+      <div className="grupo-bar">
+        <div className="form-group">
+          <label htmlFor="grupo-sel">Grupo a analizar</label>
+          <select id="grupo-sel" value={grupoSel} onChange={(e) => setGrupoSel(e.target.value)}>
+            <option value="">Todos los productores</option>
+            {grupos.map((g) => (
+              <option key={g.id} value={g.id}>{g.nombre} ({g.card_codes.length})</option>
+            ))}
+          </select>
+        </div>
+        <button type="button" className="btn btn-primary" style={{ width: 'auto' }} onClick={() => setShowModal(true)}>
+          Gestionar grupos
+        </button>
+      </div>
 
       <div className="comparativa-filtros">
         <div className="period-toggle">
@@ -180,13 +208,23 @@ export default function ComparativaTab() {
         </div>
       )}
 
-      <ChartPanel title="Top 10 productores por litros remitidos">
-        <RankingBarChart data={top10Litros} dataKey="litros" unit="L" color={CHART_COLORS.primary} />
-      </ChartPanel>
+      <div className="charts-grid">
+        <ChartPanel title="Litros remitidos por mes">
+          <SerieMensualChart data={series?.litros} color={CHART_COLORS.primary} label="Litros" unit="L" />
+        </ChartPanel>
+        <ChartPanel title="Liquidación bruta por mes">
+          <SerieMensualChart data={series?.liquidacion_bruta} color={CHART_COLORS.gold} label="Importe bruto" />
+        </ChartPanel>
+      </div>
 
-      <ChartPanel title="Top 10 productores por materia grasa (promedio)">
-        <RankingBarChart data={top10Grasa} dataKey="grasa" unit="%" color={CHART_COLORS.gold} />
-      </ChartPanel>
+      <div className="charts-grid">
+        <ChartPanel title="Células somáticas (promedio mensual)">
+          <SerieMensualChart data={series?.celulas} color={CHART_COLORS.accent} label="Cél. som. (miles)" />
+        </ChartPanel>
+        <ChartPanel title="Recuento bacteriano (promedio mensual)">
+          <SerieMensualChart data={series?.bacterias} color={CHART_COLORS.primary} label="Rec. bact. (miles)" />
+        </ChartPanel>
+      </div>
 
       <h3 className="section-title">Comparativa por productor</h3>
       <div className="table-wrap">
@@ -209,7 +247,7 @@ export default function ComparativaTab() {
               </tr>
             </thead>
             <tbody>
-              {tabla.map((p) => (
+              {visibles.map((p) => (
                 <tr key={p.card_code}>
                   <td>{p.card_name} <span className="muted-code">({p.card_code})</span></td>
                   <td className="num">{fmt(p.litros)}</td>
@@ -228,34 +266,181 @@ export default function ComparativaTab() {
           </table>
         )}
       </div>
+      <VerMasButton abierto={abierto} restantes={restantes} onToggle={toggle} />
 
-      <h3 className="section-title">Entregas recientes del padrón</h3>
-      <div className="table-wrap">
-        {recientes.length === 0 ? (
-          <div className="empty-state">Sin entregas recientes.</div>
-        ) : (
+      {showModal && (
+        <GestionGruposModal
+          grupos={grupos}
+          onClose={() => setShowModal(false)}
+          onChange={async () => {
+            await cargarGrupos();
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// --- Modal de gestión de grupos ---
+function GestionGruposModal({ grupos, onClose, onChange }) {
+  const [padron, setPadron] = useState([]);
+  const [nuevo, setNuevo] = useState('');
+  const [editId, setEditId] = useState(null);
+  const [nombre, setNombre] = useState('');
+  const [miembros, setMiembros] = useState(() => new Set());
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api('/api/admin/productores');
+        setPadron(res.data || []);
+      } catch (err) {
+        setError(err.message);
+      }
+    })();
+  }, []);
+
+  function abrirEdicion(g) {
+    setEditId(g.id);
+    setNombre(g.nombre);
+    setMiembros(new Set(g.card_codes || []));
+    setError('');
+  }
+
+  async function crear() {
+    const n = nuevo.trim();
+    if (!n) return;
+    setBusy(true);
+    setError('');
+    try {
+      await api('/api/admin/grupos', { method: 'POST', body: JSON.stringify({ nombre: n }) });
+      setNuevo('');
+      await onChange();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function guardar() {
+    if (!editId) return;
+    setBusy(true);
+    setError('');
+    try {
+      await api(`/api/admin/grupos/${editId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ nombre: nombre.trim(), card_codes: [...miembros] }),
+      });
+      setEditId(null);
+      await onChange();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function eliminar(id) {
+    if (!window.confirm('¿Eliminar este grupo?')) return;
+    setBusy(true);
+    setError('');
+    try {
+      await api(`/api/admin/grupos/${id}`, { method: 'DELETE' });
+      if (editId === id) setEditId(null);
+      await onChange();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function toggleMiembro(code) {
+    setMiembros((s) => {
+      const next = new Set(s);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-card__header">
+          <h3 style={{ margin: 0 }}>Gestionar grupos</h3>
+          <button type="button" className="btn btn-vermas" style={{ padding: '0.2rem 0.6rem' }} onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
+
+        {error && <div className="error-msg">{error}</div>}
+
+        <div className="form-group" style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+          <div style={{ flex: 1 }}>
+            <label htmlFor="nuevo-grupo">Nuevo grupo</label>
+            <input id="nuevo-grupo" type="text" value={nuevo} onChange={(e) => setNuevo(e.target.value)} placeholder="Nombre del grupo" />
+          </div>
+          <button type="button" className="btn btn-primary" style={{ width: 'auto' }} disabled={busy || !nuevo.trim()} onClick={crear}>
+            Crear
+          </button>
+        </div>
+
+        <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Productor</th>
-                <th>Remito</th>
-                <th className="num">Litros</th>
+                <th>Grupo</th>
+                <th className="num">Productores</th>
+                <th className="num">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {recientes.map((r, i) => (
-                <tr key={`${r.card_code}-${r.doc_num}-${i}`}>
-                  <td>{fmtDate(r.doc_date)}</td>
-                  <td>{r.card_name} <span className="muted-code">({r.card_code})</span></td>
-                  <td>{r.doc_num}</td>
-                  <td className="num">{fmt(r.litros)}</td>
+              {grupos.map((g) => (
+                <tr key={g.id}>
+                  <td>{g.nombre}</td>
+                  <td className="num">{g.card_codes.length}</td>
+                  <td className="num">
+                    <button type="button" className="btn btn-ghost" style={{ width: 'auto', padding: '0.25rem 0.6rem' }} onClick={() => abrirEdicion(g)}>Editar</button>{' '}
+                    <button type="button" className="btn btn-ghost" style={{ width: 'auto', padding: '0.25rem 0.6rem', color: '#b3261e' }} onClick={() => eliminar(g.id)}>Eliminar</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+
+        {editId && (
+          <div className="stat-card" style={{ marginTop: '1rem' }}>
+            <div className="form-group">
+              <label htmlFor="edit-nombre">Nombre del grupo</label>
+              <input id="edit-nombre" type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+            </div>
+            <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--muted)' }}>
+              Productores del grupo ({miembros.size})
+            </label>
+            <div className="grupo-miembros">
+              {padron.map((p) => (
+                <label key={p.card_code}>
+                  <input type="checkbox" checked={miembros.has(p.card_code)} onChange={() => toggleMiembro(p.card_code)} />
+                  {p.card_name} <span className="muted-code">({p.card_code})</span>
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button type="button" className="btn btn-primary" style={{ width: 'auto' }} disabled={busy || !nombre.trim()} onClick={guardar}>
+                {busy ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+              <button type="button" className="btn btn-vermas" onClick={() => setEditId(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

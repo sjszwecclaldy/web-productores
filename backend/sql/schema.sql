@@ -221,3 +221,74 @@ CREATE TABLE IF NOT EXISTS notificaciones (
 );
 
 CREATE INDEX IF NOT EXISTS idx_notificaciones_created ON notificaciones (created_at DESC);
+
+-- Grupos personalizados para la Comparativa (editables desde la web).
+CREATE TABLE IF NOT EXISTS grupos (
+  id SERIAL PRIMARY KEY,
+  nombre TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS grupo_productores (
+  grupo_id INT NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+  card_code TEXT NOT NULL,
+  PRIMARY KEY (grupo_id, card_code)
+);
+
+-- Siembra idempotente de grupos (solo inserta si el nombre no existe).
+
+INSERT INTO grupos (nombre)
+SELECT 'Socios – Colonias' WHERE NOT EXISTS (SELECT 1 FROM grupos WHERE nombre = 'Socios – Colonias');
+INSERT INTO grupo_productores (grupo_id, card_code)
+SELECT g.id, v.card_code
+FROM grupos g CROSS JOIN (VALUES ('P2044'),('P2102'),('P2143'),('P2145'),('P2185'),('P2302'),('P2316'),('P2319'),('P2328'),('P2341'),('P2362'),('P2380'),('P2388'),('P2392'),('P2395'),('P2398'),('P2403')) AS v(card_code)
+WHERE g.nombre = 'Socios – Colonias'
+ON CONFLICT (grupo_id, card_code) DO NOTHING;
+
+INSERT INTO grupos (nombre)
+SELECT 'No Socios – Paysandú' WHERE NOT EXISTS (SELECT 1 FROM grupos WHERE nombre = 'No Socios – Paysandú');
+INSERT INTO grupo_productores (grupo_id, card_code)
+SELECT g.id, v.card_code
+FROM grupos g CROSS JOIN (VALUES ('P2413'),('P2415'),('P2417'),('P2419'),('P2420'),('P2422'),('P2423'),('P2425'),('P2426'),('P2427'),('P2430'),('P2431'),('P2432'),('P2433'),('P2434'),('P2436'),('P2437'),('P2439'),('P2440'),('P2441'),('P2443'),('P2444'),('P2445'),('P2446'),('P2447'),('P2449'),('P2451'),('P2453'),('P2454'),('P2455'),('P2456'),('P2457')) AS v(card_code)
+WHERE g.nombre = 'No Socios – Paysandú'
+ON CONFLICT (grupo_id, card_code) DO NOTHING;
+
+INSERT INTO grupos (nombre)
+SELECT 'No Socios – Cuenca Tradicional' WHERE NOT EXISTS (SELECT 1 FROM grupos WHERE nombre = 'No Socios – Cuenca Tradicional');
+INSERT INTO grupo_productores (grupo_id, card_code)
+SELECT g.id, v.card_code
+FROM grupos g CROSS JOIN (VALUES ('P2530'),('P2534'),('P2538'),('P2545'),('P2546'),('P2548'),('P2555'),('P2558'),('P2560'),('P2566'),('P2569'),('P2732'),('P2747'),('P2808'),('P2883'),('P2935'),('P2973'),('P2979'),('P2984'),('P2987'),('P2992'),('P2993'),('P2996')) AS v(card_code)
+WHERE g.nombre = 'No Socios – Cuenca Tradicional'
+ON CONFLICT (grupo_id, card_code) DO NOTHING;
+
+INSERT INTO grupos (nombre)
+SELECT 'No Socios – Sin subgrupo' WHERE NOT EXISTS (SELECT 1 FROM grupos WHERE nombre = 'No Socios – Sin subgrupo');
+INSERT INTO grupo_productores (grupo_id, card_code)
+SELECT g.id, v.card_code
+FROM grupos g CROSS JOIN (VALUES ('P2600')) AS v(card_code)
+WHERE g.nombre = 'No Socios – Sin subgrupo'
+ON CONFLICT (grupo_id, card_code) DO NOTHING;
+
+INSERT INTO grupos (nombre)
+SELECT 'Socios – Cuenca Tradicional' WHERE NOT EXISTS (SELECT 1 FROM grupos WHERE nombre = 'Socios – Cuenca Tradicional');
+INSERT INTO grupo_productores (grupo_id, card_code)
+SELECT g.id, v.card_code
+FROM grupos g CROSS JOIN (VALUES ('P2622')) AS v(card_code)
+WHERE g.nombre = 'Socios – Cuenca Tradicional'
+ON CONFLICT (grupo_id, card_code) DO NOTHING;
+
+INSERT INTO grupos (nombre)
+SELECT 'Todos los Socios' WHERE NOT EXISTS (SELECT 1 FROM grupos WHERE nombre = 'Todos los Socios');
+INSERT INTO grupo_productores (grupo_id, card_code)
+SELECT g.id, v.card_code
+FROM grupos g CROSS JOIN (VALUES ('P2044'),('P2102'),('P2143'),('P2145'),('P2185'),('P2302'),('P2316'),('P2319'),('P2328'),('P2341'),('P2362'),('P2380'),('P2388'),('P2392'),('P2395'),('P2398'),('P2403'),('P2622')) AS v(card_code)
+WHERE g.nombre = 'Todos los Socios'
+ON CONFLICT (grupo_id, card_code) DO NOTHING;
+
+INSERT INTO grupos (nombre)
+SELECT 'Todos los No Socios' WHERE NOT EXISTS (SELECT 1 FROM grupos WHERE nombre = 'Todos los No Socios');
+INSERT INTO grupo_productores (grupo_id, card_code)
+SELECT g.id, v.card_code
+FROM grupos g CROSS JOIN (VALUES ('P2413'),('P2415'),('P2417'),('P2419'),('P2420'),('P2422'),('P2423'),('P2425'),('P2426'),('P2427'),('P2430'),('P2431'),('P2432'),('P2433'),('P2434'),('P2436'),('P2437'),('P2439'),('P2440'),('P2441'),('P2443'),('P2444'),('P2445'),('P2446'),('P2447'),('P2449'),('P2451'),('P2453'),('P2454'),('P2455'),('P2456'),('P2457'),('P2530'),('P2534'),('P2538'),('P2545'),('P2546'),('P2548'),('P2555'),('P2558'),('P2560'),('P2566'),('P2569'),('P2600'),('P2732'),('P2747'),('P2808'),('P2883'),('P2935'),('P2973'),('P2979'),('P2984'),('P2987'),('P2992'),('P2993'),('P2996')) AS v(card_code)
+WHERE g.nombre = 'Todos los No Socios'
+ON CONFLICT (grupo_id, card_code) DO NOTHING;

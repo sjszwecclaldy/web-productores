@@ -18,6 +18,8 @@ import PeriodFilter from '../components/PeriodFilter';
 import QualityGauge from '../components/QualityGauge';
 import SelectedDateBanner from '../components/SelectedDateBanner';
 import YearCompareLineChart from '../components/YearCompareLineChart';
+import VerMasButton from '../components/VerMasButton';
+import { useColapsable } from '../hooks/useColapsable';
 
 const METRICS = [
   { key: 'fat', label: 'Grasa %' },
@@ -170,6 +172,8 @@ export default function Composicion() {
     return base.filter((r) => !isCurrentMonth(r.collection_date));
   }, [selectedDate, selectedRows, registros]);
 
+  const { visibles, restantes, abierto, toggle } = useColapsable(historico, 10);
+
   function handleDateSelect(date) {
     setSelectedDate((current) => toggleSelectedDate(current, date));
   }
@@ -287,7 +291,7 @@ export default function Composicion() {
                 </tr>
               </thead>
               <tbody>
-                {historico.map((r, i) => (
+                {visibles.map((r, i) => (
                   <tr
                     key={`${r.collection_date}-${i}`}
                     className={highlight && String(r.collection_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
@@ -299,6 +303,7 @@ export default function Composicion() {
             </table>
           )}
         </div>
+        <VerMasButton abierto={abierto} restantes={restantes} onToggle={toggle} />
       </main>
     </div>
   );

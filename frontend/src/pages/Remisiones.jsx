@@ -19,6 +19,8 @@ import YearCompareLineChart from '../components/YearCompareLineChart';
 import LoadingScreen from '../components/LoadingScreen';
 import PeriodFilter from '../components/PeriodFilter';
 import SelectedDateBanner from '../components/SelectedDateBanner';
+import VerMasButton from '../components/VerMasButton';
+import { useColapsable } from '../hooks/useColapsable';
 
 const EXPORT_COLS = [
   { header: 'Fecha', value: (r) => fmtDate(r.doc_date) },
@@ -154,6 +156,8 @@ export default function Remisiones() {
     const base = selectedDate ? selectedRemisiones : registros;
     return base.filter((r) => !isCurrentMonth(r.doc_date));
   }, [selectedDate, selectedRemisiones, registros]);
+
+  const { visibles, restantes, abierto, toggle } = useColapsable(historico, 10);
 
   function handleDateSelect(date) {
     setSelectedDate((current) => toggleSelectedDate(current, date));
@@ -300,7 +304,7 @@ export default function Remisiones() {
                 </tr>
               </thead>
               <tbody>
-                {historico.map((r, i) => (
+                {visibles.map((r, i) => (
                   <tr
                     key={`${r.doc_num}-${i}`}
                     className={highlight && String(r.doc_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
@@ -316,6 +320,7 @@ export default function Remisiones() {
             </table>
           )}
         </div>
+        <VerMasButton abierto={abierto} restantes={restantes} onToggle={toggle} />
       </main>
     </div>
   );

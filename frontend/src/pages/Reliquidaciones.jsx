@@ -16,6 +16,8 @@ import LoadingScreen from '../components/LoadingScreen';
 import MonthlyBarChart from '../components/MonthlyBarChart';
 import PeriodFilter from '../components/PeriodFilter';
 import { SelectedMonthBanner } from '../components/SelectedDateBanner';
+import VerMasButton from '../components/VerMasButton';
+import { useColapsable } from '../hooks/useColapsable';
 
 const EXPORT_COLS = [
   { header: 'Fecha', value: (r) => fmtDate(r.doc_date) },
@@ -103,6 +105,8 @@ export default function Reliquidaciones() {
     const base = selectedMonth ? selectedRows : registros;
     return base.filter((r) => !isCurrentMonth(r.doc_date));
   }, [selectedMonth, selectedRows, registros]);
+
+  const { visibles, restantes, abierto, toggle } = useColapsable(historico, 10);
 
   function handleMonthSelect(month) {
     setSelectedMonth((current) => toggleSelectedMonth(current, month));
@@ -223,7 +227,7 @@ export default function Reliquidaciones() {
                 </tr>
               </thead>
               <tbody>
-                {historico.map((r, i) => (
+                {visibles.map((r, i) => (
                   <tr key={`${r.doc_num}-${i}`}>
                     <td>{fmtDate(r.doc_date)}</td>
                     <td>{r.doc_num}</td>
@@ -235,6 +239,7 @@ export default function Reliquidaciones() {
             </table>
           )}
         </div>
+        <VerMasButton abierto={abierto} restantes={restantes} onToggle={toggle} />
       </main>
     </div>
   );

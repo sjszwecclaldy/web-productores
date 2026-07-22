@@ -15,6 +15,8 @@ import LoadingScreen from '../components/LoadingScreen';
 import MonthlyBarChart from '../components/MonthlyBarChart';
 import PeriodFilter from '../components/PeriodFilter';
 import { SelectedMonthBanner } from '../components/SelectedDateBanner';
+import VerMasButton from '../components/VerMasButton';
+import { useColapsable } from '../hooks/useColapsable';
 
 const EXPORT_COLS = [
   { header: 'Fecha', value: (r) => fmtDate(r.doc_date) },
@@ -119,6 +121,8 @@ export default function Liquidaciones() {
     const base = selectedMonth ? selectedRows : registros;
     return base.filter((r) => !isCurrentMonth(r.doc_date));
   }, [selectedMonth, selectedRows, registros]);
+
+  const { visibles, restantes, abierto, toggle } = useColapsable(historico, 10);
 
   function handleMonthSelect(month) {
     setSelectedMonth((current) => toggleSelectedMonth(current, month));
@@ -239,7 +243,7 @@ export default function Liquidaciones() {
                 </tr>
               </thead>
               <tbody>
-                {historico.map((r, i) => (
+                {visibles.map((r, i) => (
                   <tr key={`${r.num_at_card}-${r.doc_date}-${i}`}>
                     <LiqRow r={r} />
                     <td className="num">{fmt(calcImporteNeto(r))}</td>
@@ -249,6 +253,7 @@ export default function Liquidaciones() {
             </table>
           )}
         </div>
+        <VerMasButton abierto={abierto} restantes={restantes} onToggle={toggle} />
       </main>
     </div>
   );

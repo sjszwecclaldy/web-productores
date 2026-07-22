@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken, isAdmin, getAdminCardCode } from '../api';
 import { fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import LoadingScreen from '../components/LoadingScreen';
+import VerMasButton from '../components/VerMasButton';
+import { useColapsable } from '../hooks/useColapsable';
 
 const TEMAS = ['Calidad de Leche', 'Antibiótico', 'Visita de rutina', 'Otros'];
 
@@ -151,7 +153,7 @@ export default function Visitas() {
     }
   }
 
-  const visibles = useMemo(() => visitas, [visitas]);
+  const { visibles, restantes, abierto, toggle } = useColapsable(visitas, 10);
 
   if (loading) {
     return <LoadingScreen />;
@@ -303,6 +305,7 @@ export default function Visitas() {
             </table>
           )}
         </div>
+        <VerMasButton abierto={abierto} restantes={restantes} onToggle={toggle} />
       </main>
     </div>
   );
