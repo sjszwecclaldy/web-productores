@@ -228,10 +228,10 @@ export default function ComparativaTab() {
 
       <div className="charts-grid">
         <ChartPanel title="Células somáticas (promedio mensual)">
-          <MultiProductorChart data={series?.celulas} showPromedio={showProm} />
+          <MultiProductorChart data={series?.celulas} showPromedio={showProm} agg="avg" />
         </ChartPanel>
         <ChartPanel title="Recuento bacteriano (promedio mensual)">
-          <MultiProductorChart data={series?.bacterias} showPromedio={showProm} />
+          <MultiProductorChart data={series?.bacterias} showPromedio={showProm} agg="avg" />
         </ChartPanel>
       </div>
 
@@ -412,7 +412,7 @@ function GestionGruposModal({ grupos, onClose, onChange }) {
                   <td>{g.nombre}</td>
                   <td className="num">{g.card_codes.length}</td>
                   <td className="num">
-                    <button type="button" className="btn btn-ghost" style={{ width: 'auto', padding: '0.25rem 0.6rem' }} onClick={() => abrirEdicion(g)}>Editar</button>{' '}
+                    <button type="button" className="btn btn-primary" style={{ width: 'auto', padding: '0.25rem 0.6rem' }} onClick={() => abrirEdicion(g)}>Editar</button>{' '}
                     <button type="button" className="btn btn-ghost" style={{ width: 'auto', padding: '0.25rem 0.6rem', color: '#b3261e' }} onClick={() => eliminar(g.id)}>Eliminar</button>
                   </td>
                 </tr>
