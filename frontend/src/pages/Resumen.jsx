@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import { avgCalidadByDate, formatChartDate, groupSumByDate } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt } from '../utils';
+import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
@@ -42,11 +42,17 @@ export default function Resumen() {
   const [remisiones, setRemisiones] = useState([]);
   const [calidad, setCalidad] = useState([]);
   const [calidadSan, setCalidadSan] = useState([]);
+  const [vencRefre, setVencRefre] = useState(null);
   const [activePreset, setActivePreset] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [from, setFrom] = useState(() => apiFromDate(30));
   const [to, setTo] = useState('');
+
+  async function loadVencimiento() {
+    const data = await api('/api/vencimientos');
+    setVencRefre(data.data?.venc_refre || null);
+  }
 
   async function loadAll(f = from, t = to) {
     const params = new URLSearchParams();
@@ -66,7 +72,7 @@ export default function Resumen() {
   useEffect(() => {
     async function init() {
       try {
-        await loadAll();
+        await Promise.all([loadAll(), loadVencimiento()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -152,6 +158,11 @@ export default function Resumen() {
       <main className="main">
         <h2 className="page-title">Resumen</h2>
         {error && <div className="error-msg">{error}</div>}
+
+        <div className="venc-card">
+          <span className="venc-card__label">Vencimiento refrendación (Sanidad del tambo)</span>
+          <strong className="venc-card__value">{vencRefre ? fmtDate(vencRefre) : '—'}</strong>
+        </div>
 
         <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} activePreset={activePreset} onApply={applyPeriod} />
 

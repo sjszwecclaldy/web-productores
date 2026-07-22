@@ -770,6 +770,30 @@ th.num {
   color: var(--primary-hover);
 }
 
+.venc-card {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding: 0.55rem 0.9rem;
+  background: var(--bg-tint);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 100%;
+}
+
+.venc-card__label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.venc-card__value {
+  font-size: 1rem;
+  color: var(--text);
+  font-weight: 700;
+}
+
 @keyframes logo-pulse {
   0%, 100% {
     opacity: 1;
