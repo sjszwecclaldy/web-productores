@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
   try {
     const { rows } = await query(
       `SELECT to_char(doc_date, 'YYYY-MM-DD') AS doc_date, doc_num, item_code, descripcion,
-              quantity, price, line_total
+              quantity, price, line_total, temperatura, antibiotico
        FROM remisiones
        WHERE ${conditions.join(' AND ')}
        ORDER BY doc_date DESC, doc_entry DESC, line_num ASC`,
@@ -45,7 +45,7 @@ router.get('/resumen', async (req, res) => {
   try {
     const ultimo = await query(
       `SELECT to_char(doc_date, 'YYYY-MM-DD') AS doc_date, doc_num, item_code, descripcion,
-              quantity, price, line_total
+              quantity, price, line_total, temperatura, antibiotico
        FROM remisiones
        WHERE card_code = $1
        ORDER BY doc_date DESC, doc_entry DESC, line_num ASC

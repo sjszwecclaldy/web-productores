@@ -23,6 +23,8 @@ const EXPORT_COLS = [
   { header: 'Fecha', value: (r) => fmtDate(r.doc_date) },
   { header: 'Remito', value: (r) => r.doc_num },
   { header: 'Litros', value: (r) => r.quantity },
+  { header: 'Temperatura', value: (r) => r.temperatura },
+  { header: 'Antibióticos', value: (r) => r.antibiotico },
 ];
 
 export default function Remisiones() {
@@ -204,6 +206,8 @@ export default function Remisiones() {
                     <th>Fecha</th>
                     <th>Remito</th>
                     <th className="num">Litros</th>
+                    <th className="num">Temperatura</th>
+                    <th>Antibióticos</th>
                     <th>Estado</th>
                   </tr>
                 </thead>
@@ -216,6 +220,8 @@ export default function Remisiones() {
                       <td>{fmtDate(r.doc_date)}</td>
                       <td>{r.doc_num}</td>
                       <td className="num">{fmt(r.quantity)}</td>
+                      <td className="num">{fmt(r.temperatura)}</td>
+                      <td>{r.antibiotico || '—'}</td>
                       <td><span className="badge badge--pendiente">Pendiente de validación</span></td>
                     </tr>
                   ))}
@@ -243,6 +249,8 @@ export default function Remisiones() {
                   <th>Fecha</th>
                   <th>Remito</th>
                   <th className="num">Litros</th>
+                  <th className="num">Temperatura</th>
+                  <th>Antibióticos</th>
                 </tr>
               </thead>
               <tbody>
@@ -254,6 +262,8 @@ export default function Remisiones() {
                     <td>{fmtDate(r.doc_date)}</td>
                     <td>{r.doc_num}</td>
                     <td className="num">{fmt(r.quantity)}</td>
+                    <td className="num">{fmt(r.temperatura)}</td>
+                    <td>{r.antibiotico || '—'}</td>
                   </tr>
                 ))}
               </tbody>
