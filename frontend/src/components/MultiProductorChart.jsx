@@ -12,7 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext, useMemo } from 'react';
-import { CHART_COLORS, LINE_COLORS, domainCentered, formatMonthYear } from '../chartUtils';
+import { CHART_COLORS, LINE_COLORS, domainCentered, formatMonthYear, geometricMean } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
@@ -29,7 +29,7 @@ export default function MultiProductorChart({
   data,
   showPromedio = false,
   unit = '',
-  agg = 'sum', // 'sum' (litros, liquidación) | 'avg' (células, bacterias)
+  agg = 'sum', // 'sum' (litros, liquidación) | 'avg' (células, bacterias → geométrico)
   emptyMessage = 'Sin datos para el período',
 }) {
   const ctxHeight = useContext(ChartHeightContext);
@@ -39,18 +39,25 @@ export default function MultiProductorChart({
     const rows = data || [];
     const meses = [...new Set(rows.map((r) => r.mes))].sort();
 
-    // Total (o promedio) por productor sobre todo el período.
-    const acc = new Map(); // card_code -> { card_code, card_name, suma, cuenta }
+    // Total (o promedio geométrico) por productor sobre todo el período.
+    const acc = new Map(); // card_code -> { card_code, card_name, valores: number[] }
     rows.forEach((r) => {
-      if (!acc.has(r.card_code)) acc.set(r.card_code, { card_code: r.card_code, card_name: r.card_name, suma: 0, cuenta: 0 });
+      if (!acc.has(r.card_code)) acc.set(r.card_code, { card_code: r.card_code, card_name: r.card_name, valores: [] });
       if (r.valor != null) {
-        const a = acc.get(r.card_code);
-        a.suma += r.valor;
-        a.cuenta += 1;
+        const n = Number(r.valor);
+        if (Number.isFinite(n)) acc.get(r.card_code).valores.push(n);
       }
     });
     const totales = [...acc.values()]
-      .map((a) => ({ card_code: a.card_code, card_name: a.card_name, total: agg === 'avg' ? (a.cuenta ? a.suma / a.cuenta : 0) : a.suma }))
+      .map((a) => {
+        let total = 0;
+        if (agg === 'avg') {
+          total = geometricMean(a.valores) ?? 0;
+        } else {
+          total = a.valores.reduce((s, v) => s + v, 0);
+        }
+        return { card_code: a.card_code, card_name: a.card_name, total };
+      })
       .sort((x, y) => y.total - x.total);
 
     const colorMap = {};
@@ -67,7 +74,9 @@ export default function MultiProductorChart({
       topCodes.forEach((c) => { if (porMes.get(mes)[c] != null) row[c] = porMes.get(mes)[c]; });
       if (showPromedio) {
         const vals = [...acc.keys()].map((c) => porMes.get(mes)[c]).filter((v) => v != null);
-        row.__prom = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+        row.__prom = agg === 'avg'
+          ? geometricMean(vals)
+          : (vals.length ? vals.reduce((a, b) => a + Number(b), 0) / vals.length : null);
       }
       return row;
     });

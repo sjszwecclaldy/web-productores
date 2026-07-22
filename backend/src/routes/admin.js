@@ -75,8 +75,8 @@ router.get('/dashboard', async (req, res) => {
        ),
        san AS (
          SELECT card_code,
-                AVG(celulas) AS celulas,
-                AVG(bacterias) AS bacterias,
+                EXP(AVG(LN(celulas)) FILTER (WHERE celulas > 0)) AS celulas,
+                EXP(AVG(LN(bacterias)) FILTER (WHERE bacterias > 0)) AS bacterias,
                 COUNT(*) AS muestras_san
          FROM calidad_sanitaria
          WHERE lab_date >= $1 AND ($2::date IS NULL OR lab_date <= $2)
@@ -110,6 +110,12 @@ router.get('/dashboard', async (req, res) => {
       const vals = productores.map((p) => p[key]).filter((v) => v != null).map(Number);
       return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
     };
+    // Células / bacterias: promedio geométrico de los promedios geométricos por productor.
+    const geoMeanOf = (key) => {
+      const vals = productores.map((p) => p[key]).filter((v) => v != null).map(Number).filter((n) => n > 0);
+      if (!vals.length) return null;
+      return Math.exp(vals.reduce((s, n) => s + Math.log(n), 0) / vals.length);
+    };
 
     const kpis = {
       productores_con_datos: productores.filter((p) => num(p.entregas) > 0).length,
@@ -120,8 +126,8 @@ router.get('/dashboard', async (req, res) => {
       promedio_proteina: avgOf('proteina'),
       promedio_lactosa: avgOf('lactosa'),
       promedio_solidos: avgOf('solidos'),
-      promedio_celulas: avgOf('celulas'),
-      promedio_bacterias: avgOf('bacterias'),
+      promedio_celulas: geoMeanOf('celulas'),
+      promedio_bacterias: geoMeanOf('bacterias'),
     };
 
     res.json({
@@ -647,13 +653,15 @@ router.get('/comparativa-series', async (req, res) => {
        GROUP BY 1, t.card_code, pr.card_name ORDER BY 1, pr.card_name`
     );
     const celulas = await serie(
-      `SELECT to_char(t.lab_date, 'YYYY-MM') AS mes, t.card_code, pr.card_name, AVG(t.celulas) AS valor
+      `SELECT to_char(t.lab_date, 'YYYY-MM') AS mes, t.card_code, pr.card_name,
+              EXP(AVG(LN(t.celulas)) FILTER (WHERE t.celulas > 0)) AS valor
        FROM calidad_sanitaria t JOIN productores pr ON pr.card_code = t.card_code
        WHERE t.lab_date >= $1 AND ($2::date IS NULL OR t.lab_date <= $2) AND ${grupoClause}
        GROUP BY 1, t.card_code, pr.card_name ORDER BY 1, pr.card_name`
     );
     const bacterias = await serie(
-      `SELECT to_char(t.lab_date, 'YYYY-MM') AS mes, t.card_code, pr.card_name, AVG(t.bacterias) AS valor
+      `SELECT to_char(t.lab_date, 'YYYY-MM') AS mes, t.card_code, pr.card_name,
+              EXP(AVG(LN(t.bacterias)) FILTER (WHERE t.bacterias > 0)) AS valor
        FROM calidad_sanitaria t JOIN productores pr ON pr.card_code = t.card_code
        WHERE t.lab_date >= $1 AND ($2::date IS NULL OR t.lab_date <= $2) AND ${grupoClause}
        GROUP BY 1, t.card_code, pr.card_name ORDER BY 1, pr.card_name`

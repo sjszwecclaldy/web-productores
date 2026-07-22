@@ -202,8 +202,8 @@ export default function ComparativaTab() {
           <KpiCard label="Importe liquidado" value={fmt(kpis.total_importe_liquidado)} />
           <KpiCard label="Prom. grasa" value={fmt(kpis.promedio_grasa)} />
           <KpiCard label="Prom. proteína" value={fmt(kpis.promedio_proteina)} />
-          <KpiCard label="Prom. células" value={fmt(kpis.promedio_celulas)} />
-          <KpiCard label="Prom. bacterias" value={fmt(kpis.promedio_bacterias)} />
+          <KpiCard label="Prom. geom. células" value={fmt(kpis.promedio_celulas)} />
+          <KpiCard label="Prom. geom. bacterias" value={fmt(kpis.promedio_bacterias)} />
         </div>
       )}
 

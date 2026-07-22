@@ -14,8 +14,22 @@ const INDICADORES = {
   litros: { table: 'remisiones', dateCol: 'doc_date', expr: 'SUM(quantity)', label: 'Litros', unidad: 'L' },
   grasa: { table: 'calidad_composicion', dateCol: 'collection_date', expr: 'AVG(fat)', label: 'Grasa', unidad: '%' },
   proteina: { table: 'calidad_composicion', dateCol: 'collection_date', expr: 'AVG(protein)', label: 'Proteína', unidad: '%' },
-  celulas: { table: 'calidad_sanitaria', dateCol: 'lab_date', expr: 'AVG(celulas)', label: 'Células somáticas (miles)', unidad: '' },
-  bacterias: { table: 'calidad_sanitaria', dateCol: 'lab_date', expr: 'AVG(bacterias)', label: 'Recuento bacteriano (miles)', unidad: '' },
+  celulas: {
+    table: 'calidad_sanitaria',
+    dateCol: 'lab_date',
+    expr: 'EXP(AVG(LN(celulas)) FILTER (WHERE celulas > 0))',
+    label: 'Células somáticas (miles)',
+    unidad: '',
+    geometric: true,
+  },
+  bacterias: {
+    table: 'calidad_sanitaria',
+    dateCol: 'lab_date',
+    expr: 'EXP(AVG(LN(bacterias)) FILTER (WHERE bacterias > 0))',
+    label: 'Recuento bacteriano (miles)',
+    unidad: '',
+    geometric: true,
+  },
 };
 
 // Que indicadores evaluar segun el dominio que acaba de ingestar el agente.
@@ -115,6 +129,9 @@ async function evaluarControles(domain, cardCodes) {
       let actual = null;
       let promedio = null;
       try {
+        const promExpr = ind.geometric
+          ? 'EXP(AVG(LN(v)) FILTER (WHERE v > 0))'
+          : 'AVG(v)';
         const { rows } = await pool.query(
           `WITH daily AS (
              SELECT ${ind.dateCol} AS d, ${ind.expr} AS v
@@ -124,7 +141,7 @@ async function evaluarControles(domain, cardCodes) {
            )
            SELECT
              (SELECT v FROM daily WHERE d = $2) AS actual,
-             (SELECT AVG(v) FROM (SELECT v FROM daily WHERE d < $2 ORDER BY d DESC LIMIT $3) t) AS promedio`,
+             (SELECT ${promExpr} FROM (SELECT v FROM daily WHERE d < $2 ORDER BY d DESC LIMIT $3) t) AS promedio`,
           [cardCode, fecha, ventana]
         );
         actual = rows[0]?.actual != null ? Number(rows[0].actual) : null;

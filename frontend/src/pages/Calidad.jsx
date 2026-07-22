@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { avgByYearMonth, CHART_COLORS, formatChartDate } from '../chartUtils';
+import { avgByYearMonth, CHART_COLORS, formatChartDate, geometricMean } from '../chartUtils';
 import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate, isCurrentMonth } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
@@ -98,14 +98,19 @@ export default function Calidad() {
   const ultima = registros[0] || null;
 
   const promedios = useMemo(() => {
-    const avg = (arr) => (arr.length ? arr.reduce((sum, v) => sum + v, 0) / arr.length : null);
     const cel = registros.filter((r) => r.celulas != null).map((r) => Number(r.celulas));
     const bac = registros.filter((r) => r.bacterias != null).map((r) => Number(r.bacterias));
-    return { celulas: avg(cel), bacterias: avg(bac) };
+    return { celulas: geometricMean(cel), bacterias: geometricMean(bac) };
   }, [registros]);
 
-  const yearCelulas = useMemo(() => avgByYearMonth(allRegistros, 'lab_date', 'celulas'), [allRegistros]);
-  const yearBacterias = useMemo(() => avgByYearMonth(allRegistros, 'lab_date', 'bacterias'), [allRegistros]);
+  const yearCelulas = useMemo(
+    () => avgByYearMonth(allRegistros, 'lab_date', 'celulas', { geometric: true }),
+    [allRegistros]
+  );
+  const yearBacterias = useMemo(
+    () => avgByYearMonth(allRegistros, 'lab_date', 'bacterias', { geometric: true }),
+    [allRegistros]
+  );
 
   const mesCorriente = useMemo(
     () => registros.filter((r) => isCurrentMonth(r.lab_date)),
@@ -146,12 +151,12 @@ export default function Calidad() {
         <div className="kpi-grid">
           <KpiCard
             icon="🔬"
-            label="Prom. células somáticas (miles)"
+            label="Prom. geom. células somáticas (miles)"
             value={promedios.celulas != null ? fmt(promedios.celulas) : '—'}
           />
           <KpiCard
             icon="🦠"
-            label="Prom. recuento bacteriano (miles)"
+            label="Prom. geom. recuento bacteriano (miles)"
             value={promedios.bacterias != null ? fmt(promedios.bacterias) : '—'}
           />
         </div>

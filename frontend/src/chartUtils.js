@@ -57,6 +57,18 @@ export function collectChartValues(rows, keys) {
   return out;
 }
 
+/** Promedio geométrico (solo valores > 0). Usado para células y bacterias. */
+export function geometricMean(values) {
+  const nums = [];
+  for (const v of values) {
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) nums.push(n);
+  }
+  if (!nums.length) return null;
+  const logSum = nums.reduce((s, n) => s + Math.log(n), 0);
+  return Math.exp(logSum / nums.length);
+}
+
 export function dateDaysAgo(days) {
   const d = new Date();
   d.setDate(d.getDate() - days);
@@ -366,7 +378,8 @@ export function formatMonthYear(month) {
 }
 
 // Promedio de un indicador por mes y por anio (para el grafico comparativo entre anios).
-export function avgByYearMonth(rows, dateKey, valueKey) {
+// geometric=true → promedio geométrico (células / bacterias).
+export function avgByYearMonth(rows, dateKey, valueKey, { geometric = false } = {}) {
   const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   const yearsSet = new Set();
   const sums = new Map();
@@ -375,21 +388,37 @@ export function avgByYearMonth(rows, dateKey, valueKey) {
     if (ds.length < 7) continue;
     const v = row[valueKey];
     if (v == null) continue;
+    const n = Number(v);
+    if (!Number.isFinite(n)) continue;
+    if (geometric && n <= 0) continue;
     const year = ds.slice(0, 4);
     const monthIdx = parseInt(ds.slice(5, 7), 10) - 1;
     if (monthIdx < 0 || monthIdx > 11) continue;
     yearsSet.add(year);
     if (!sums.has(monthIdx)) sums.set(monthIdx, {});
     const b = sums.get(monthIdx);
-    if (!b[year]) b[year] = { s: 0, n: 0 };
-    b[year].s += Number(v) || 0;
-    b[year].n += 1;
+    if (!b[year]) b[year] = geometric ? { logSum: 0, n: 0 } : { s: 0, n: 0 };
+    if (geometric) {
+      b[year].logSum += Math.log(n);
+      b[year].n += 1;
+    } else {
+      b[year].s += n;
+      b[year].n += 1;
+    }
   }
   const data = [];
   for (let i = 0; i < 12; i++) {
     const row = { monthIdx: i, label: months[i] };
     const b = sums.get(i);
-    if (b) for (const y of Object.keys(b)) row[y] = Math.round((b[y].s / b[y].n) * 100) / 100;
+    if (b) {
+      for (const y of Object.keys(b)) {
+        const cell = b[y];
+        const val = geometric
+          ? (cell.n ? Math.exp(cell.logSum / cell.n) : null)
+          : (cell.n ? cell.s / cell.n : null);
+        if (val != null) row[y] = Math.round(val * 100) / 100;
+      }
+    }
     data.push(row);
   }
   return { years: [...yearsSet].sort(), data };

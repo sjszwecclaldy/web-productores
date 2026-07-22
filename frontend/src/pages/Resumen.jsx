@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { avgCalidadByDate, CHART_COLORS, formatChartDate, groupSumByDate } from '../chartUtils';
+import { avgCalidadByDate, CHART_COLORS, formatChartDate, geometricMean, groupSumByDate } from '../chartUtils';
 import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
@@ -136,8 +136,8 @@ export default function Resumen() {
         : null,
       grasa: avg(nums(calidad, 'fat')),
       proteina: avg(nums(calidad, 'protein')),
-      celulas: avg(nums(calidadSan, 'celulas')),
-      bacterias: avg(nums(calidadSan, 'bacterias')),
+      celulas: geometricMean(nums(calidadSan, 'celulas')),
+      bacterias: geometricMean(nums(calidadSan, 'bacterias')),
     }),
     [litrosByDay, calidad, calidadSan]
   );
