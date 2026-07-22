@@ -198,6 +198,8 @@ export default function Reliquidaciones() {
                     <th>Documento</th>
                     <th>Concepto</th>
                     <th className="num">Importe Bruto</th>
+                    <th className="num">Retención</th>
+                    <th className="num">Importe Neto</th>
                     <th>Estado</th>
                   </tr>
                 </thead>
@@ -208,6 +210,8 @@ export default function Reliquidaciones() {
                       <td>{r.doc_num}</td>
                       <td>{r.descripcion || ''}</td>
                       <td className="num">{fmt(r.line_total)}</td>
+                      <td className="num">{fmt(r.retencion)}</td>
+                      <td className="num">{fmt(r.neto)}</td>
                       <td><span className="badge badge--pendiente">Pendiente de validación</span></td>
                     </tr>
                   ))}
@@ -236,6 +240,8 @@ export default function Reliquidaciones() {
                   <th>Documento</th>
                   <th>Concepto</th>
                   <th className="num">Importe Bruto</th>
+                  <th className="num">Retención</th>
+                  <th className="num">Importe Neto</th>
                 </tr>
               </thead>
               <tbody>
@@ -245,6 +251,8 @@ export default function Reliquidaciones() {
                     <td>{r.doc_num}</td>
                     <td>{r.descripcion || ''}</td>
                     <td className="num">{fmt(r.line_total)}</td>
+                    <td className="num">{fmt(r.retencion)}</td>
+                    <td className="num">{fmt(r.neto)}</td>
                   </tr>
                 ))}
               </tbody>
