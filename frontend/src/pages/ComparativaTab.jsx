@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { CHART_COLORS } from '../chartUtils';
 import { fmt, fmtDate } from '../utils';
 import ChartPanel from '../components/ChartPanel';
 import KpiCard from '../components/KpiCard';
-import SerieMensualChart from '../components/SerieMensualChart';
+import MultiProductorChart from '../components/MultiProductorChart';
 import VerMasButton from '../components/VerMasButton';
 import { useColapsable } from '../hooks/useColapsable';
 
@@ -20,7 +19,6 @@ const COLUMNAS = [
   { key: 'litros', label: 'Litros', num: true },
   { key: 'entregas', label: 'Entregas', num: true },
   { key: 'ultima_entrega', label: 'Última entrega', num: false, fecha: true },
-  { key: 'importe_liquidado', label: 'Importe liq.', num: true },
   { key: 'grasa', label: 'Grasa', num: true },
   { key: 'proteina', label: 'Proteína', num: true },
   { key: 'lactosa', label: 'Lactosa', num: true },
@@ -51,6 +49,7 @@ export default function ComparativaTab() {
   const [grupos, setGrupos] = useState([]);
   const [grupoSel, setGrupoSel] = useState(''); // '' = todos
   const [showModal, setShowModal] = useState(false);
+  const [showProm, setShowProm] = useState(true);
 
   const cargarGrupos = useCallback(async () => {
     try {
@@ -208,21 +207,31 @@ export default function ComparativaTab() {
         </div>
       )}
 
+      <div className="table-toolbar">
+        <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
+          Cada línea es un productor del grupo.
+        </span>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+          <input type="checkbox" checked={showProm} onChange={(e) => setShowProm(e.target.checked)} style={{ width: 'auto' }} />
+          Mostrar promedio del grupo
+        </label>
+      </div>
+
       <div className="charts-grid">
         <ChartPanel title="Litros remitidos por mes">
-          <SerieMensualChart data={series?.litros} color={CHART_COLORS.primary} label="Litros" unit="L" />
+          <MultiProductorChart data={series?.litros} showPromedio={showProm} unit="L" />
         </ChartPanel>
         <ChartPanel title="Liquidación bruta por mes">
-          <SerieMensualChart data={series?.liquidacion_bruta} color={CHART_COLORS.gold} label="Importe bruto" />
+          <MultiProductorChart data={series?.liquidacion_bruta} showPromedio={showProm} />
         </ChartPanel>
       </div>
 
       <div className="charts-grid">
         <ChartPanel title="Células somáticas (promedio mensual)">
-          <SerieMensualChart data={series?.celulas} color={CHART_COLORS.accent} label="Cél. som. (miles)" />
+          <MultiProductorChart data={series?.celulas} showPromedio={showProm} />
         </ChartPanel>
         <ChartPanel title="Recuento bacteriano (promedio mensual)">
-          <SerieMensualChart data={series?.bacterias} color={CHART_COLORS.primary} label="Rec. bact. (miles)" />
+          <MultiProductorChart data={series?.bacterias} showPromedio={showProm} />
         </ChartPanel>
       </div>
 
@@ -253,7 +262,6 @@ export default function ComparativaTab() {
                   <td className="num">{fmt(p.litros)}</td>
                   <td className="num">{fmt(p.entregas)}</td>
                   <td>{p.ultima_entrega ? fmtDate(p.ultima_entrega) : '—'}</td>
-                  <td className="num">{fmt(p.importe_liquidado)}</td>
                   <td className="num">{p.grasa != null ? fmt(p.grasa) : '—'}</td>
                   <td className="num">{p.proteina != null ? fmt(p.proteina) : '—'}</td>
                   <td className="num">{p.lactosa != null ? fmt(p.lactosa) : '—'}</td>

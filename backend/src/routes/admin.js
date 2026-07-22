@@ -624,35 +624,43 @@ router.get('/comparativa-series', async (req, res) => {
   const grupoId = Number.isInteger(parseInt(req.query.grupo_id, 10)) ? parseInt(req.query.grupo_id, 10) : null;
   const p = [desde, hasta, grupoId];
 
+  // Filtro de grupo sobre la tabla `t` (alias). Cada dato viene desglosado por productor.
   const grupoClause =
-    '($3::int IS NULL OR card_code IN (SELECT card_code FROM grupo_productores WHERE grupo_id = $3))';
+    '($3::int IS NULL OR t.card_code IN (SELECT card_code FROM grupo_productores WHERE grupo_id = $3))';
 
-  const serie = async (sql) => (await query(sql, p)).rows.map((r) => ({ mes: r.mes, valor: r.valor != null ? Number(r.valor) : null }));
+  // Devuelve filas [{ mes, card_code, card_name, valor }] por productor.
+  const serie = async (sql) =>
+    (await query(sql, p)).rows.map((r) => ({
+      mes: r.mes,
+      card_code: r.card_code,
+      card_name: r.card_name || r.card_code,
+      valor: r.valor != null ? Number(r.valor) : null,
+    }));
 
   try {
     const litros = await serie(
-      `SELECT to_char(doc_date, 'YYYY-MM') AS mes, SUM(quantity) AS valor
-       FROM remisiones
-       WHERE doc_date >= $1 AND ($2::date IS NULL OR doc_date <= $2) AND ${grupoClause}
-       GROUP BY 1 ORDER BY 1`
+      `SELECT to_char(t.doc_date, 'YYYY-MM') AS mes, t.card_code, pr.card_name, SUM(t.quantity) AS valor
+       FROM remisiones t JOIN productores pr ON pr.card_code = t.card_code
+       WHERE t.doc_date >= $1 AND ($2::date IS NULL OR t.doc_date <= $2) AND ${grupoClause}
+       GROUP BY 1, t.card_code, pr.card_name ORDER BY 1, pr.card_name`
     );
     const celulas = await serie(
-      `SELECT to_char(lab_date, 'YYYY-MM') AS mes, AVG(celulas) AS valor
-       FROM calidad_sanitaria
-       WHERE lab_date >= $1 AND ($2::date IS NULL OR lab_date <= $2) AND ${grupoClause}
-       GROUP BY 1 ORDER BY 1`
+      `SELECT to_char(t.lab_date, 'YYYY-MM') AS mes, t.card_code, pr.card_name, AVG(t.celulas) AS valor
+       FROM calidad_sanitaria t JOIN productores pr ON pr.card_code = t.card_code
+       WHERE t.lab_date >= $1 AND ($2::date IS NULL OR t.lab_date <= $2) AND ${grupoClause}
+       GROUP BY 1, t.card_code, pr.card_name ORDER BY 1, pr.card_name`
     );
     const bacterias = await serie(
-      `SELECT to_char(lab_date, 'YYYY-MM') AS mes, AVG(bacterias) AS valor
-       FROM calidad_sanitaria
-       WHERE lab_date >= $1 AND ($2::date IS NULL OR lab_date <= $2) AND ${grupoClause}
-       GROUP BY 1 ORDER BY 1`
+      `SELECT to_char(t.lab_date, 'YYYY-MM') AS mes, t.card_code, pr.card_name, AVG(t.bacterias) AS valor
+       FROM calidad_sanitaria t JOIN productores pr ON pr.card_code = t.card_code
+       WHERE t.lab_date >= $1 AND ($2::date IS NULL OR t.lab_date <= $2) AND ${grupoClause}
+       GROUP BY 1, t.card_code, pr.card_name ORDER BY 1, pr.card_name`
     );
     const liquidacion_bruta = await serie(
-      `SELECT to_char(doc_date, 'YYYY-MM') AS mes, SUM(total) AS valor
-       FROM liquidaciones
-       WHERE doc_date >= $1 AND ($2::date IS NULL OR doc_date <= $2) AND ${grupoClause}
-       GROUP BY 1 ORDER BY 1`
+      `SELECT to_char(t.doc_date, 'YYYY-MM') AS mes, t.card_code, pr.card_name, SUM(t.total) AS valor
+       FROM liquidaciones t JOIN productores pr ON pr.card_code = t.card_code
+       WHERE t.doc_date >= $1 AND ($2::date IS NULL OR t.doc_date <= $2) AND ${grupoClause}
+       GROUP BY 1, t.card_code, pr.card_name ORDER BY 1, pr.card_name`
     );
     res.json({ periodo: { desde, hasta }, series: { litros, celulas, bacterias, liquidacion_bruta } });
   } catch (err) {
