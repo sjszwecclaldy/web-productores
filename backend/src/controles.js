@@ -47,7 +47,7 @@ async function evaluarControles(domain, cardCodes) {
   const { rows: pares } = await pool.query(
     `SELECT DISTINCT card_code, to_char(${base.dateCol}, 'YYYY-MM-DD') AS fecha
      FROM ${base.table}
-     WHERE card_code = ANY($1) AND ${base.dateCol} >= $2`,
+     WHERE card_code = ANY($1) AND ${base.dateCol} >= $2${base.table === 'remisiones' ? " AND canceled IS DISTINCT FROM 'Y'" : ''}`,
     [cardCodes, cutoff]
   );
   if (pares.length === 0) return;
@@ -70,7 +70,7 @@ async function evaluarControles(domain, cardCodes) {
         try {
           const { rows } = await pool.query(
             `SELECT ${ind.expr} AS v FROM ${ind.table}
-             WHERE card_code = $1 AND ${ind.dateCol} = $2`,
+             WHERE card_code = $1 AND ${ind.dateCol} = $2${ind.table === 'remisiones' ? " AND canceled IS DISTINCT FROM 'Y'" : ''}`,
             [cardCode, fecha]
           );
           actual = rows[0]?.v != null ? Number(rows[0].v) : null;
@@ -119,7 +119,7 @@ async function evaluarControles(domain, cardCodes) {
           `WITH daily AS (
              SELECT ${ind.dateCol} AS d, ${ind.expr} AS v
              FROM ${ind.table}
-             WHERE card_code = $1 AND ${ind.dateCol} <= $2
+             WHERE card_code = $1 AND ${ind.dateCol} <= $2${ind.table === 'remisiones' ? " AND canceled IS DISTINCT FROM 'Y'" : ''}
              GROUP BY ${ind.dateCol}
            )
            SELECT

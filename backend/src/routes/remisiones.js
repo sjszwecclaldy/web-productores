@@ -23,6 +23,9 @@ router.get('/', async (req, res) => {
     params.push(to);
   }
 
+  // Nunca mostrar remitos cancelados (CANCELED = 'Y' en SAP).
+  conditions.push("canceled IS DISTINCT FROM 'Y'");
+
   try {
     const { rows } = await query(
       `SELECT to_char(doc_date, 'YYYY-MM-DD') AS doc_date, doc_num, item_code, descripcion,
@@ -47,7 +50,7 @@ router.get('/resumen', async (req, res) => {
       `SELECT to_char(doc_date, 'YYYY-MM-DD') AS doc_date, doc_num, item_code, descripcion,
               quantity, price, line_total, temperatura, antibiotico
        FROM remisiones
-       WHERE card_code = $1
+       WHERE card_code = $1 AND canceled IS DISTINCT FROM 'Y'
        ORDER BY doc_date DESC, doc_entry DESC, line_num ASC
        LIMIT 1`,
       [card_code]
@@ -59,6 +62,7 @@ router.get('/resumen', async (req, res) => {
               COUNT(*) AS entregas
        FROM remisiones
        WHERE card_code = $1
+         AND canceled IS DISTINCT FROM 'Y'
          AND doc_date >= (CURRENT_DATE - INTERVAL '30 days')`,
       [card_code]
     );

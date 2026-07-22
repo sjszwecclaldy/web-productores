@@ -53,6 +53,7 @@ router.get('/dashboard', async (req, res) => {
                 SUM(line_total) AS importe_remitido
          FROM remisiones
          WHERE doc_date >= $1 AND ($2::date IS NULL OR doc_date <= $2)
+           AND canceled IS DISTINCT FROM 'Y'
          GROUP BY card_code
        ),
        cal AS (
@@ -642,6 +643,7 @@ router.get('/comparativa-series', async (req, res) => {
       `SELECT to_char(t.doc_date, 'YYYY-MM') AS mes, t.card_code, pr.card_name, SUM(t.quantity) AS valor
        FROM remisiones t JOIN productores pr ON pr.card_code = t.card_code
        WHERE t.doc_date >= $1 AND ($2::date IS NULL OR t.doc_date <= $2) AND ${grupoClause}
+         AND t.canceled IS DISTINCT FROM 'Y'
        GROUP BY 1, t.card_code, pr.card_name ORDER BY 1, pr.card_name`
     );
     const celulas = await serie(
