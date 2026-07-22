@@ -540,6 +540,76 @@ router.post('/ingest/calidad-sanitaria', async (req, res) => {
   }
 });
 
+router.post('/ingest/vencimientos', async (req, res) => {
+  const records = req.body;
+
+  if (!Array.isArray(records) || records.length === 0) {
+    return res.status(400).json({ error: 'Se espera un array de registros' });
+  }
+
+  const toBigint = (v) => {
+    if (v === undefined || v === null || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.round(n) : null;
+  };
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    let inserted = 0;
+    let updated = 0;
+
+    for (const rec of records) {
+      const cardCode = String(rec.card_code || rec.CardCode || '').trim();
+      if (!cardCode) continue;
+
+      const result = await client.query(
+        `INSERT INTO vencimientos (
+           card_code, card_name, email, phone, venc_refre, dicose, valid_for, group_code, synced_at
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+         ON CONFLICT (card_code)
+         DO UPDATE SET
+           card_name = EXCLUDED.card_name,
+           email = EXCLUDED.email,
+           phone = EXCLUDED.phone,
+           venc_refre = EXCLUDED.venc_refre,
+           dicose = EXCLUDED.dicose,
+           valid_for = EXCLUDED.valid_for,
+           group_code = EXCLUDED.group_code,
+           synced_at = NOW()
+         RETURNING (xmax = 0) AS is_insert`,
+        [
+          cardCode,
+          rec.card_name ?? rec.CardName ?? null,
+          rec.email ?? rec.E_Mail ?? null,
+          rec.phone ?? rec.Phone1 ?? null,
+          rec.venc_refre ?? rec.U_VENC_REFRE ?? null,
+          toBigint(rec.dicose ?? rec.U_DICOSE),
+          rec.valid_for ?? rec.validFor ?? null,
+          toBigint(rec.group_code ?? rec.GroupCode),
+        ]
+      );
+
+      if (result.rows[0]?.is_insert) {
+        inserted++;
+      } else {
+        updated++;
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ inserted, updated });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('ingest vencimientos error:', err);
+    res.status(500).json({ error: 'Error en ingest', detail: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 router.post('/crear-admin', async (req, res) => {
   const { email, password, card_name } = req.body;
 
@@ -638,6 +708,7 @@ const DOMAIN_TABLES = {
   liquidaciones: { table: 'liquidaciones', dateCol: 'doc_date' },
   reliquidaciones: { table: 'reliquidaciones', dateCol: 'doc_date' },
   calidad_sanitaria: { table: 'calidad_sanitaria', dateCol: 'lab_date' },
+  vencimientos: { table: 'vencimientos', dateCol: 'venc_refre' },
 };
 
 // GET /internal/counts -> cuantos registros hay por dominio y su rango de fechas.

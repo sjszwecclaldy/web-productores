@@ -148,6 +148,30 @@ $Domains = @(
                 origen    = $Row.Origen
             }
         }
+    },
+    @{
+        Name        = 'VENCIMIENTO'
+        DomainKey   = 'vencimientos'
+        SapService  = 'VENCIMIENTO'
+        DateField   = ''
+        IngestPath  = '/internal/ingest/vencimientos'
+        SelectFields = @(
+            'CardCode', 'CardName', 'E_Mail', 'Phone1',
+            'U_VENC_REFRE', 'U_DICOSE', 'validFor', 'GroupCode'
+        )
+        Transform = {
+            param($Row)
+            @{
+                card_code  = $Row.CardCode
+                card_name  = $Row.CardName
+                email      = $Row.E_Mail
+                phone      = $Row.Phone1
+                venc_refre = $Row.U_VENC_REFRE
+                dicose     = $Row.U_DICOSE
+                valid_for  = $Row.validFor
+                group_code = $Row.GroupCode
+            }
+        }
     }
 )
 

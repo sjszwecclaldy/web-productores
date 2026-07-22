@@ -222,9 +222,13 @@ function Get-SapRecords {
     $baseUrl = $SapBaseUrl.TrimEnd('/')
     $serviceRoot = "$baseUrl/sml.svc"
     $selectClause = ($SelectFields -join ',')
-    $filterValue = "$DateField ge '$FromDate'"
-    $filterEncoded = [uri]::EscapeDataString($filterValue)
-    $url = "$serviceRoot/$SapService" + '?$select=' + $selectClause + '&$filter=' + $filterEncoded
+    $url = "$serviceRoot/$SapService" + '?$select=' + $selectClause
+    # Dominios "snapshot" (sin campo de fecha) traen la tabla completa sin $filter.
+    if ($null -ne $DateField -and $DateField -ne '') {
+        $filterValue = "$DateField ge '$FromDate'"
+        $filterEncoded = [uri]::EscapeDataString($filterValue)
+        $url = $url + '&$filter=' + $filterEncoded
+    }
     $firstRequest = $true
     $page = 0
     while ($null -ne $url -and $url -ne '') {

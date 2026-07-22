@@ -115,6 +115,23 @@ CREATE TABLE IF NOT EXISTS calidad_sanitaria (
 CREATE INDEX IF NOT EXISTS idx_calidad_sanitaria_card_date
   ON calidad_sanitaria (card_code, lab_date DESC);
 
+-- Vencimiento de refrendación (vista SAP VENCIMIENTO). Un registro por productor.
+CREATE TABLE IF NOT EXISTS vencimientos (
+  id SERIAL PRIMARY KEY,
+  card_code TEXT NOT NULL,
+  card_name TEXT,
+  email TEXT,
+  phone TEXT,
+  venc_refre DATE,
+  dicose BIGINT,
+  valid_for TEXT,
+  group_code INTEGER,
+  synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (card_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_vencimientos_venc ON vencimientos (venc_refre);
+
 CREATE TABLE IF NOT EXISTS sync_log (
   id SERIAL PRIMARY KEY,
   started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
