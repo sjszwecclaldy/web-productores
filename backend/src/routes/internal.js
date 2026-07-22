@@ -732,10 +732,10 @@ router.get('/counts', async (_req, res) => {
   res.json({ counts });
 });
 
-// POST /internal/reset-domain  { "domain": "remisiones" }
-// Vacia la tabla del dominio (TRUNCATE) para forzar una recarga historica completa
-// en la siguiente corrida del agente (sync-status devolvera null -> baja desde 2000-01-01).
-// Nunca toca la tabla productores.
+// POST /internal/reset-domain  { "domain": "remisiones" }            -> vacia toda la tabla (TRUNCATE)
+//   opcional: { "domain": "remisiones", "from": "2026-07-01" }        -> borra solo desde esa fecha
+// Con "from", el agente recarga solo ese tramo (la sync-status devuelve el ultimo dato anterior),
+// lo que evita recargas historicas enormes que agotan la sesion SAP. Nunca toca la tabla productores.
 router.post('/reset-domain', async (req, res) => {
   const domain = String(req.body?.domain || '').trim();
   const cfg = DOMAIN_TABLES[domain];
@@ -747,10 +747,23 @@ router.post('/reset-domain', async (req, res) => {
     });
   }
 
+  const fromRaw = req.body?.from ? String(req.body.from).trim() : null;
+  const from = fromRaw && /^\d{4}-\d{2}-\d{2}$/.test(fromRaw) ? fromRaw : null;
+  if (fromRaw && !from) {
+    return res.status(400).json({ error: "Formato de 'from' invalido (se espera YYYY-MM-DD)" });
+  }
+
   try {
-    const before = await query(`SELECT COUNT(*)::int AS n FROM ${cfg.table}`);
-    await query(`TRUNCATE TABLE ${cfg.table}`);
-    res.json({ ok: true, domain, table: cfg.table, deleted: before.rows[0].n });
+    let deleted;
+    if (from) {
+      const r = await query(`DELETE FROM ${cfg.table} WHERE ${cfg.dateCol} >= $1`, [from]);
+      deleted = r.rowCount;
+    } else {
+      const before = await query(`SELECT COUNT(*)::int AS n FROM ${cfg.table}`);
+      await query(`TRUNCATE TABLE ${cfg.table}`);
+      deleted = before.rows[0].n;
+    }
+    res.json({ ok: true, domain, table: cfg.table, deleted, scope: from ? `>= ${from}` : 'todo' });
   } catch (err) {
     console.error('reset-domain error:', err);
     res.status(500).json({ error: 'Error interno', detail: err.message });
