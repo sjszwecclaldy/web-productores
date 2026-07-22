@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import {
   CHART_COLORS,
+  fillMonthGaps,
   formatMonthLabel,
   groupSumByMonth,
   rowsOnMonth,
@@ -15,6 +16,7 @@ import ExportButton from '../components/ExportButton';
 import LoadingScreen from '../components/LoadingScreen';
 import MonthlyBarChart from '../components/MonthlyBarChart';
 import PeriodFilter from '../components/PeriodFilter';
+import { loadPeriodo, savePeriodo } from '../periodoStore';
 import { SelectedMonthBanner } from '../components/SelectedDateBanner';
 import VerMasButton from '../components/VerMasButton';
 import { useColapsable } from '../hooks/useColapsable';
@@ -29,12 +31,13 @@ const EXPORT_COLS = [
 export default function Reliquidaciones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
-  const [activePreset, setActivePreset] = useState(365);
+  const periodoInit = loadPeriodo();
+  const [activePreset, setActivePreset] = useState(periodoInit.preset);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState(() => apiFromDate(365));
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState(periodoInit.from);
+  const [to, setTo] = useState(periodoInit.to);
 
   async function loadRegistros(f = from, t = to) {
     const params = new URLSearchParams();
@@ -66,6 +69,7 @@ export default function Reliquidaciones() {
     setFrom(f);
     setTo(t);
     setActivePreset(preset);
+    savePeriodo(preset, f, t);
     setLoading(true);
     setError('');
     setSelectedMonth(null);
@@ -79,7 +83,7 @@ export default function Reliquidaciones() {
   }
 
   const chartMonthly = useMemo(() => {
-    const rows = groupSumByMonth(registros, 'doc_date', 'line_total');
+    const rows = fillMonthGaps(groupSumByMonth(registros, 'doc_date', 'line_total'));
     return rows.map((r) => ({ ...r, importe: r.total }));
   }, [registros]);
 

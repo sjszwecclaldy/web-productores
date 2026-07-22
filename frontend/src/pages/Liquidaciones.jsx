@@ -14,6 +14,7 @@ import ExportButton from '../components/ExportButton';
 import LoadingScreen from '../components/LoadingScreen';
 import MonthlyBarChart from '../components/MonthlyBarChart';
 import PeriodFilter from '../components/PeriodFilter';
+import { loadPeriodo, savePeriodo } from '../periodoStore';
 import { SelectedMonthBanner } from '../components/SelectedDateBanner';
 import VerMasButton from '../components/VerMasButton';
 import { useColapsable } from '../hooks/useColapsable';
@@ -53,12 +54,13 @@ function LiqRow({ r }) {
 export default function Liquidaciones() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState([]);
-  const [activePreset, setActivePreset] = useState(365);
+  const periodoInit = loadPeriodo();
+  const [activePreset, setActivePreset] = useState(periodoInit.preset);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState(() => apiFromDate(365));
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState(periodoInit.from);
+  const [to, setTo] = useState(periodoInit.to);
 
   async function loadRegistros(f = from, t = to) {
     const params = new URLSearchParams();
@@ -90,6 +92,7 @@ export default function Liquidaciones() {
     setFrom(f);
     setTo(t);
     setActivePreset(preset);
+    savePeriodo(preset, f, t);
     setLoading(true);
     setError('');
     setSelectedMonth(null);

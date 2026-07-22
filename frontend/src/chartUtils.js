@@ -103,6 +103,26 @@ export function groupSumByMonth(rows, dateKey, valueKey) {
     .sort((a, b) => a.month.localeCompare(b.month));
 }
 
+// Rellena los meses faltantes entre el primero y el último con total = null,
+// para que en el gráfico aparezca el mes (vacío) aunque no haya dato.
+export function fillMonthGaps(series) {
+  if (!series || series.length === 0) return series || [];
+  const byMonth = new Map(series.map((s) => [s.month, s]));
+  const [y0, m0] = series[0].month.split('-').map(Number);
+  const last = series[series.length - 1].month;
+  const out = [];
+  let y = y0;
+  let m = m0;
+  for (let guard = 0; guard < 600; guard += 1) {
+    const key = `${y}-${String(m).padStart(2, '0')}`;
+    out.push(byMonth.get(key) || { month: key, label: formatMonthLabel(key), total: null });
+    if (key === last) break;
+    m += 1;
+    if (m > 12) { m = 1; y += 1; }
+  }
+  return out;
+}
+
 export function groupAvgByMonth(rows, dateKey, valueKey) {
   const map = new Map();
   for (const row of rows) {

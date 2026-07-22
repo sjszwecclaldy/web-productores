@@ -9,6 +9,7 @@ import ChartPanel from '../components/ChartPanel';
 import LitrosLineChart from '../components/LitrosLineChart';
 import LoadingScreen from '../components/LoadingScreen';
 import PeriodFilter from '../components/PeriodFilter';
+import { loadPeriodo, savePeriodo } from '../periodoStore';
 
 const avg = (arr) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null);
 const nums = (rows, key) => rows.filter((r) => r[key] != null).map((r) => Number(r[key]));
@@ -43,11 +44,12 @@ export default function Resumen() {
   const [calidad, setCalidad] = useState([]);
   const [calidadSan, setCalidadSan] = useState([]);
   const [vencRefre, setVencRefre] = useState(null);
-  const [activePreset, setActivePreset] = useState(30);
+  const periodoInit = loadPeriodo();
+  const [activePreset, setActivePreset] = useState(periodoInit.preset);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState(() => apiFromDate(30));
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState(periodoInit.from);
+  const [to, setTo] = useState(periodoInit.to);
 
   async function loadVencimiento() {
     const data = await api('/api/vencimientos');
@@ -91,6 +93,7 @@ export default function Resumen() {
     setFrom(f);
     setTo(t);
     setActivePreset(preset);
+    savePeriodo(preset, f, t);
     setLoading(true);
     setError('');
     try {

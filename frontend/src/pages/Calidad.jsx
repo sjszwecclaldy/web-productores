@@ -10,6 +10,7 @@ import ExportButton from '../components/ExportButton';
 import KpiCard from '../components/KpiCard';
 import LoadingScreen from '../components/LoadingScreen';
 import PeriodFilter from '../components/PeriodFilter';
+import { loadPeriodo, savePeriodo } from '../periodoStore';
 import QualityGauge from '../components/QualityGauge';
 import YearCompareLineChart from '../components/YearCompareLineChart';
 import VerMasButton from '../components/VerMasButton';
@@ -27,14 +28,12 @@ export default function Calidad() {
   const highlight = searchParams.get('fecha');
   const [registros, setRegistros] = useState([]);
   const [allRegistros, setAllRegistros] = useState([]);
-  const [activePreset, setActivePreset] = useState(30);
+  const periodoInit = loadPeriodo();
+  const [activePreset, setActivePreset] = useState(periodoInit.preset);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState(() => {
-    const def = apiFromDate(30);
-    return highlight && highlight < def ? highlight : def;
-  });
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState(() => (highlight && highlight < periodoInit.from ? highlight : periodoInit.from));
+  const [to, setTo] = useState(periodoInit.to);
 
   async function loadRegistros(f = from, t = to) {
     const params = new URLSearchParams();
@@ -71,6 +70,7 @@ export default function Calidad() {
     setFrom(f);
     setTo(t);
     setActivePreset(preset);
+    savePeriodo(preset, f, t);
     setLoading(true);
     setError('');
     try {
