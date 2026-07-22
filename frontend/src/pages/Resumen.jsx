@@ -159,12 +159,20 @@ export default function Resumen() {
         <h2 className="page-title">Resumen</h2>
         {error && <div className="error-msg">{error}</div>}
 
-        <div className="venc-card">
-          <span className="venc-card__label">Vencimiento refrendación (Sanidad del tambo)</span>
-          <strong className="venc-card__value">{vencRefre ? fmtDate(vencRefre) : '—'}</strong>
-        </div>
-
-        <PeriodFilter from={from} to={to} onFrom={setFrom} onTo={setTo} activePreset={activePreset} onApply={applyPeriod} />
+        <PeriodFilter
+          from={from}
+          to={to}
+          onFrom={setFrom}
+          onTo={setTo}
+          activePreset={activePreset}
+          onApply={applyPeriod}
+          abovePresets={
+            <div className="venc-card">
+              <span className="venc-card__label">Vencimiento refrendación (Sanidad del tambo)</span>
+              <strong className="venc-card__value">{vencRefre ? fmtDate(vencRefre) : '—'}</strong>
+            </div>
+          }
+        />
 
         <h3 className="section-title">Indicadores</h3>
         <div className="metric-grid">

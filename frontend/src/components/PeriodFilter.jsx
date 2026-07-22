@@ -15,7 +15,7 @@ export function presetFrom(key) {
   return key === 'todos' ? DATA_FROM_DATE : apiFromDate(key);
 }
 
-export default function PeriodFilter({ from, to, onFrom, onTo, activePreset, onApply }) {
+export default function PeriodFilter({ from, to, onFrom, onTo, activePreset, onApply, abovePresets }) {
   function handleSubmit(e) {
     e.preventDefault();
     onApply(from, to, null);
@@ -41,17 +41,20 @@ export default function PeriodFilter({ from, to, onFrom, onTo, activePreset, onA
         </button>
       </form>
 
-      <div className="period-toggle period-presets">
-        {PRESETS.map((p) => (
-          <button
-            key={p.key}
-            type="button"
-            className={`period-toggle__btn${activePreset === p.key ? ' active' : ''}`}
-            onClick={() => handlePreset(p.key)}
-          >
-            {p.label}
-          </button>
-        ))}
+      <div className="period-presets-col">
+        {abovePresets}
+        <div className="period-toggle period-presets">
+          {PRESETS.map((p) => (
+            <button
+              key={p.key}
+              type="button"
+              className={`period-toggle__btn${activePreset === p.key ? ' active' : ''}`}
+              onClick={() => handlePreset(p.key)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

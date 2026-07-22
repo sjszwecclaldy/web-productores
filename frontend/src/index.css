@@ -441,6 +441,13 @@ a {
   align-items: center;
 }
 
+.period-presets-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
 .chart-panel__expand {
   display: inline-flex;
   align-items: center;
@@ -775,7 +782,7 @@ th.num {
   align-items: baseline;
   gap: 0.75rem;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
   padding: 0.55rem 0.9rem;
   background: var(--bg-tint);
   border: 1px solid var(--border);
