@@ -61,6 +61,28 @@ export function groupSumByMonth(rows, dateKey, valueKey) {
     .sort((a, b) => a.month.localeCompare(b.month));
 }
 
+export function groupAvgByMonth(rows, dateKey, valueKey) {
+  const map = new Map();
+  for (const row of rows) {
+    const date = row[dateKey];
+    if (!date) continue;
+    const month = String(date).slice(0, 7);
+    const val = Number(row[valueKey]);
+    if (!Number.isFinite(val)) continue;
+    if (!map.has(month)) map.set(month, { sum: 0, n: 0 });
+    const bucket = map.get(month);
+    bucket.sum += val;
+    bucket.n += 1;
+  }
+  return [...map.entries()]
+    .map(([month, { sum, n }]) => ({
+      month,
+      label: formatMonthLabel(month),
+      total: Math.round((sum / n) * 100) / 100,
+    }))
+    .sort((a, b) => a.month.localeCompare(b.month));
+}
+
 export function groupDualByMonth(rows, dateKey, fieldA, fieldB, keyA, keyB) {
   const map = new Map();
   for (const row of rows) {

@@ -19,6 +19,8 @@ export default function LitrosLineChart({
   selectedDate,
   onDateSelect,
   dots = false,
+  valueLabel = 'Litros',
+  valueUnit = ' L',
   emptyMessage = 'Sin datos para el período',
 }) {
   const ctxHeight = useContext(ChartHeightContext);
@@ -53,7 +55,7 @@ export default function LitrosLineChart({
         />
         <YAxis tick={{ fontSize: 11, fill: '#5a6d62' }} width={52} />
         <Tooltip
-          formatter={(v) => [`${fmt(v)} L`, 'Litros']}
+          formatter={(v) => [`${fmt(v)}${valueUnit}`, valueLabel]}
           labelFormatter={(l, p) => {
             const d = p && p[0] && p[0].payload;
             if (d && d.date) return fmtDate(d.date);

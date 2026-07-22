@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, clearToken } from '../api';
 import {
+  groupAvgByMonth,
   groupSumByDate,
   groupSumByMonth,
   litrosByYearMonth,
@@ -26,6 +27,15 @@ const EXPORT_COLS = [
   { header: 'Temperatura', value: (r) => r.temperatura },
   { header: 'Antibióticos', value: (r) => r.antibiotico },
 ];
+
+function isAntibioticoSi(v) {
+  const s = String(v || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return s === 'si' || s === 'y' || s === 'yes';
+}
 
 export default function Remisiones() {
   const navigate = useNavigate();
@@ -106,6 +116,11 @@ export default function Remisiones() {
     [registros]
   );
 
+  const tempPorMes = useMemo(
+    () => groupAvgByMonth(registros, 'doc_date', 'temperatura').slice(-12),
+    [registros]
+  );
+
   const selectedRemisiones = useMemo(
     () => rowsOnDate(registros, 'doc_date', selectedDate),
     [registros, selectedDate]
@@ -118,6 +133,15 @@ export default function Remisiones() {
     return {
       total_litros: src.reduce((sum, row) => sum + (Number(row.quantity) || 0), 0),
       entregas: src.length,
+    };
+  }, [selectedDate, selectedRemisiones, registros]);
+
+  const antibioticos = useMemo(() => {
+    const src = selectedDate ? selectedRemisiones : registros;
+    const conAntib = src.filter((r) => isAntibioticoSi(r.antibiotico));
+    return {
+      remisiones: conAntib.length,
+      litros: conAntib.reduce((sum, row) => sum + (Number(row.quantity) || 0), 0),
     };
   }, [selectedDate, selectedRemisiones, registros]);
 
@@ -178,6 +202,18 @@ export default function Remisiones() {
               <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
             )}
           </div>
+
+          <div className="stat-card">
+            <h3>{selectedDate ? `Antibióticos del ${fmtDate(selectedDate)}` : 'Antibióticos del período'}</h3>
+            {totales.entregas > 0 ? (
+              <>
+                <div className="stat-row"><span>Remisiones con antibióticos</span><span className="value">{antibioticos.remisiones}</span></div>
+                <div className="stat-row"><span>Litros afectados</span><span className="value">{fmt(antibioticos.litros)}</span></div>
+              </>
+            ) : (
+              <p className="empty-state" style={{ padding: '1rem 0' }}>Sin datos</p>
+            )}
+          </div>
         </div>
 
         <ChartPanel title="Litros entregados por dia">
@@ -190,6 +226,16 @@ export default function Remisiones() {
 
         <ChartPanel title="Litros por mes">
           <LitrosLineChart data={litrosPorMes} dots />
+        </ChartPanel>
+
+        <ChartPanel title="Temperatura por mes">
+          <LitrosLineChart
+            data={tempPorMes}
+            dots
+            valueLabel="Temperatura"
+            valueUnit=" °C"
+            emptyMessage="Sin datos de temperatura para el período"
+          />
         </ChartPanel>
 
         <ChartPanel title="Litros por mes — comparación de años">
