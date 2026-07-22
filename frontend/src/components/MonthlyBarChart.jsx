@@ -10,13 +10,23 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { CHART_COLORS, collectChartValues, domainCentered, formatMonthYear } from '../chartUtils';
+import { CHART_COLORS, formatMonthYear } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
 function isSameMonth(a, b) {
   if (!a || !b) return false;
   return String(a).slice(0, 7) === String(b).slice(0, 7);
+}
+
+// Etiquetas del eje Y compactas y legibles: 12,3 M / 450 k / 980.
+function fmtEjeCompacto(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '';
+  const abs = Math.abs(n);
+  if (abs >= 1e6) return `${(n / 1e6).toFixed(1).replace('.', ',').replace(',0', '')} M`;
+  if (abs >= 1e3) return `${Math.round(n / 1e3)} k`;
+  return String(Math.round(n));
 }
 
 export default function MonthlyBarChart({
@@ -38,7 +48,6 @@ export default function MonthlyBarChart({
   ];
 
   const series = bars || defaultBars;
-  const domain = domainCentered(collectChartValues(data, series.map((b) => b.key)));
 
   function handleClick(state) {
     const payload = state?.activePayload?.[0]?.payload;
@@ -57,7 +66,13 @@ export default function MonthlyBarChart({
       >
         <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} vertical={false} />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#5a6d62' }} />
-        <YAxis domain={domain} tick={{ fontSize: 11, fill: '#5a6d62' }} width={56} allowDataOverflow />
+        <YAxis
+          tick={{ fontSize: 11, fill: '#5a6d62' }}
+          width={64}
+          domain={[0, 'auto']}
+          allowDecimals={false}
+          tickFormatter={fmtEjeCompacto}
+        />
         <Tooltip
           formatter={(value, name) => {
             const s = series.find((b) => b.key === name);
