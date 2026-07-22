@@ -5,6 +5,7 @@ import {
   avgByYearMonth,
   avgCalidadByDate,
   avgCalidadSnapshot,
+  DOMAIN_GRASA_PROTEINA,
   rowsOnDate,
   toggleSelectedDate,
 } from '../chartUtils';
@@ -228,10 +229,10 @@ export default function Composicion() {
 
         <div className="charts-grid">
           <ChartPanel title="Grasa — comparación de años">
-            <YearCompareLineChart data={yearGrasa.data} years={yearGrasa.years} unit="%" />
+            <YearCompareLineChart data={yearGrasa.data} years={yearGrasa.years} unit="%" yDomain={DOMAIN_GRASA_PROTEINA} />
           </ChartPanel>
           <ChartPanel title="Proteína — comparación de años">
-            <YearCompareLineChart data={yearProteina.data} years={yearProteina.years} unit="%" />
+            <YearCompareLineChart data={yearProteina.data} years={yearProteina.years} unit="%" yDomain={DOMAIN_GRASA_PROTEINA} />
           </ChartPanel>
         </div>
 

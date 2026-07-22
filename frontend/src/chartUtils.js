@@ -5,6 +5,48 @@ export const CHART_COLORS = {
   muted: '#ccddd4',
 };
 
+/** Dominio fijo del eje Y para % grasa / proteína. */
+export const DOMAIN_GRASA_PROTEINA = [2, 6];
+
+/**
+ * Dominio [min, max] con padding para centrar la serie y facilitar la comparación.
+ * @param {Iterable} values números (ignora null/NaN)
+ * @param {{ pad?: number }} opts pad = fracción del rango a cada lado (default 0.2)
+ */
+export function domainCentered(values, { pad = 0.2 } = {}) {
+  const nums = [];
+  for (const v of values) {
+    const n = Number(v);
+    if (Number.isFinite(n)) nums.push(n);
+  }
+  if (nums.length === 0) return ['auto', 'auto'];
+  let lo = Math.min(...nums);
+  let hi = Math.max(...nums);
+  if (lo === hi) {
+    const d = Math.abs(lo) * 0.05 || 0.5;
+    lo -= d;
+    hi += d;
+  } else {
+    const span = hi - lo;
+    lo -= span * pad;
+    hi += span * pad;
+  }
+  if (lo >= hi) hi = lo + 1;
+  return [lo, hi];
+}
+
+/** Recorre filas y junta los valores de las claves indicadas. */
+export function collectChartValues(rows, keys) {
+  const out = [];
+  if (!rows || !keys) return out;
+  for (const row of rows) {
+    for (const key of keys) {
+      if (row[key] != null && row[key] !== '') out.push(row[key]);
+    }
+  }
+  return out;
+}
+
 export function dateDaysAgo(days) {
   const d = new Date();
   d.setDate(d.getDate() - days);

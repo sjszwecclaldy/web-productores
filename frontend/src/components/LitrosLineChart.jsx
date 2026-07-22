@@ -8,7 +8,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { CHART_COLORS, formatMonthYear } from '../chartUtils';
+import { CHART_COLORS, domainCentered, formatMonthYear } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt, fmtDate } from '../utils';
 
@@ -30,6 +30,7 @@ export default function LitrosLineChart({
   }
 
   const chartData = data.map((d) => ({ ...d, total: Number(d.total) }));
+  const domain = domainCentered(chartData.map((d) => d.total));
 
   function handleClick(state) {
     const payload = state?.activePayload?.[0]?.payload;
@@ -53,7 +54,7 @@ export default function LitrosLineChart({
           interval="preserveStartEnd"
           minTickGap={dots ? 8 : 40}
         />
-        <YAxis tick={{ fontSize: 11, fill: '#5a6d62' }} width={52} />
+        <YAxis domain={domain} tick={{ fontSize: 11, fill: '#5a6d62' }} width={52} allowDataOverflow />
         <Tooltip
           formatter={(v) => [`${fmt(v)}${valueUnit}`, valueLabel]}
           labelFormatter={(l, p) => {

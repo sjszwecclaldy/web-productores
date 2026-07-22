@@ -12,7 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext, useMemo } from 'react';
-import { CHART_COLORS, formatMonthYear } from '../chartUtils';
+import { CHART_COLORS, domainCentered, formatMonthYear } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
@@ -82,6 +82,15 @@ export default function MultiProductorChart({
   const lineHeight = ampliado ? 420 : (ctxHeight ?? 280);
   const barHeight = Math.max(280, barData.length * 24 + 40);
 
+  const lineKeys = [
+    ...topProductores.map((pr) => pr.card_code),
+    ...(showPromedio ? ['__prom'] : []),
+  ];
+  const lineDomain = domainCentered(
+    chartData.flatMap((row) => lineKeys.map((k) => row[k])),
+  );
+  const barDomain = domainCentered(barData.map((d) => d.total));
+
   return (
     <>
       <ResponsiveContainer width="100%" height={lineHeight}>
@@ -94,7 +103,7 @@ export default function MultiProductorChart({
             minTickGap={8}
             tickFormatter={(m) => formatMonthYear(m)}
           />
-          <YAxis tick={{ fontSize: 11, fill: '#5a6d62' }} width={52} />
+          <YAxis domain={lineDomain} tick={{ fontSize: 11, fill: '#5a6d62' }} width={52} allowDataOverflow />
           <Tooltip
             formatter={(v, name) => [`${fmt(v)}${unit ? ' ' + unit : ''}`, name]}
             labelFormatter={(m) => formatMonthYear(m)}
@@ -142,7 +151,7 @@ export default function MultiProductorChart({
         <ResponsiveContainer width="100%" height={barHeight}>
           <BarChart data={barData} layout="vertical" margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} horizontal={false} />
-            <XAxis type="number" tick={{ fontSize: 11, fill: '#5a6d62' }} />
+            <XAxis type="number" domain={barDomain} tick={{ fontSize: 11, fill: '#5a6d62' }} allowDataOverflow />
             <YAxis type="category" dataKey="card_name" width={150} tick={{ fontSize: 11, fill: '#5a6d62' }} interval={0} />
             <Tooltip
               formatter={(v) => [`${fmt(v)}${unit ? ' ' + unit : ''}`, agg === 'avg' ? 'Promedio' : 'Total']}

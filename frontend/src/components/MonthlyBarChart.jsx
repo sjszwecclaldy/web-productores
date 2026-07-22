@@ -10,7 +10,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { CHART_COLORS, formatMonthYear } from '../chartUtils';
+import { CHART_COLORS, collectChartValues, domainCentered, formatMonthYear } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
@@ -38,6 +38,7 @@ export default function MonthlyBarChart({
   ];
 
   const series = bars || defaultBars;
+  const domain = domainCentered(collectChartValues(data, series.map((b) => b.key)));
 
   function handleClick(state) {
     const payload = state?.activePayload?.[0]?.payload;
@@ -56,7 +57,7 @@ export default function MonthlyBarChart({
       >
         <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} vertical={false} />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#5a6d62' }} />
-        <YAxis tick={{ fontSize: 11, fill: '#5a6d62' }} width={56} />
+        <YAxis domain={domain} tick={{ fontSize: 11, fill: '#5a6d62' }} width={56} allowDataOverflow />
         <Tooltip
           formatter={(value, name) => {
             const s = series.find((b) => b.key === name);

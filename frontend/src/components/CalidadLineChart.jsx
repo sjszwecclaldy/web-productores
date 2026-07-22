@@ -9,7 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { CHART_COLORS } from '../chartUtils';
+import { CHART_COLORS, DOMAIN_GRASA_PROTEINA, collectChartValues, domainCentered } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt, fmtDate } from '../utils';
 
@@ -46,6 +46,7 @@ export default function CalidadLineChart({
   series,
   selectedDate,
   onDateSelect,
+  yDomain,
   emptyMessage = 'Sin datos para el período',
 }) {
   const ctxHeight = useContext(ChartHeightContext);
@@ -60,6 +61,9 @@ export default function CalidadLineChart({
   ];
 
   const lines = series || defaultSeries;
+  const isGrasaProteina = !series || lines.every((l) => l.key === 'fat' || l.key === 'protein');
+  const domain = yDomain
+    || (isGrasaProteina ? DOMAIN_GRASA_PROTEINA : domainCentered(collectChartValues(data, lines.map((l) => l.key))));
 
   function handleClick(state) {
     const payload = state?.activePayload?.[0]?.payload;
@@ -82,7 +86,7 @@ export default function CalidadLineChart({
           tick={{ fontSize: 11, fill: '#5a6d62' }}
           interval="preserveStartEnd"
         />
-        <YAxis tick={{ fontSize: 11, fill: '#5a6d62' }} width={40} />
+        <YAxis domain={domain} tick={{ fontSize: 11, fill: '#5a6d62' }} width={40} allowDataOverflow />
         <Tooltip
           formatter={(value, name) => {
             const s = lines.find((l) => l.key === name);
