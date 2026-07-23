@@ -43,11 +43,18 @@ router.get('/resumen', async (req, res) => {
 
   try {
     const ultima = await query(
-      `SELECT to_char(lab_date, 'YYYY-MM-DD') AS lab_date, celulas, bacterias, origen
-       FROM calidad_sanitaria
-       WHERE card_code = $1
-       ORDER BY lab_date DESC
-       LIMIT 1`,
+      `WITH latest AS (
+         SELECT MAX(lab_date) AS lab_date
+         FROM calidad_sanitaria
+         WHERE card_code = $1
+       )
+       SELECT to_char(cs.lab_date, 'YYYY-MM-DD') AS lab_date,
+              EXP(AVG(LN(cs.celulas)) FILTER (WHERE cs.celulas > 0)) AS celulas,
+              EXP(AVG(LN(cs.bacterias)) FILTER (WHERE cs.bacterias > 0)) AS bacterias
+       FROM calidad_sanitaria cs
+       JOIN latest ON cs.lab_date = latest.lab_date
+       WHERE cs.card_code = $1
+       GROUP BY cs.lab_date`,
       [card_code]
     );
 

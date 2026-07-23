@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { avgByYearMonth, CHART_COLORS, formatChartDate, geometricMean } from '../chartUtils';
+import { avgByYearMonth, CHART_COLORS, geometricMean, groupSanitariaByDay } from '../chartUtils';
 import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate, isCurrentMonth } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
@@ -82,20 +82,25 @@ export default function Calidad() {
     }
   }
 
+  // Series/tablas diarias: un punto por día (geo de ese día).
+  // KPIs / comparación anual: geo sobre TODAS las muestras del período (no promedio de diarios).
+  const porDia = useMemo(() => groupSanitariaByDay(registros), [registros]);
+
   const serie = useMemo(
     () =>
-      [...registros]
-        .map((r) => ({
-          date: r.lab_date,
-          label: formatChartDate(r.lab_date),
-          celulas: r.celulas != null ? Number(r.celulas) : null,
-          bacterias: r.bacterias != null ? Number(r.bacterias) : null,
-        }))
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    [registros]
+      porDia.map((r) => ({
+        date: r.date,
+        label: r.label,
+        celulas: r.celulas,
+        bacterias: r.bacterias,
+      })),
+    [porDia]
   );
 
-  const ultima = registros[0] || null;
+  const ultima = useMemo(() => {
+    if (!porDia.length) return null;
+    return [...porDia].sort((a, b) => b.date.localeCompare(a.date))[0];
+  }, [porDia]);
 
   const promedios = useMemo(() => {
     const cel = registros.filter((r) => r.celulas != null).map((r) => Number(r.celulas));
@@ -113,13 +118,13 @@ export default function Calidad() {
   );
 
   const mesCorriente = useMemo(
-    () => registros.filter((r) => isCurrentMonth(r.lab_date)),
-    [registros]
+    () => [...porDia].filter((r) => isCurrentMonth(r.lab_date)).sort((a, b) => b.lab_date.localeCompare(a.lab_date)),
+    [porDia]
   );
 
   const historico = useMemo(
-    () => registros.filter((r) => !isCurrentMonth(r.lab_date)),
-    [registros]
+    () => [...porDia].filter((r) => !isCurrentMonth(r.lab_date)).sort((a, b) => b.lab_date.localeCompare(a.lab_date)),
+    [porDia]
   );
 
   const { visibles, restantes, abierto, toggle } = useColapsable(historico, 10);
@@ -218,7 +223,7 @@ export default function Calidad() {
 
         <div className="table-toolbar">
           <h3 className="section-title" style={{ margin: 0 }}>Histórico</h3>
-          <ExportButton filename="calidad.xlsx" columns={EXPORT_COLS} rows={registros} />
+          <ExportButton filename="calidad.xlsx" columns={EXPORT_COLS} rows={porDia} />
         </div>
         <div className="table-wrap">
           {historico.length === 0 ? (

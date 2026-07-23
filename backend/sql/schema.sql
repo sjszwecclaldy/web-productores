@@ -105,6 +105,8 @@ CREATE INDEX IF NOT EXISTS idx_reliquidaciones_card_date
 ALTER TABLE reliquidaciones ADD COLUMN IF NOT EXISTS retencion NUMERIC;
 ALTER TABLE reliquidaciones ADD COLUMN IF NOT EXISTS neto NUMERIC;
 
+-- Varios analisis por productor/dia (no consolidar al ingest).
+-- El promedio diario/mensual se calcula al consultar (geo. de todas las muestras).
 CREATE TABLE IF NOT EXISTS calidad_sanitaria (
   id SERIAL PRIMARY KEY,
   card_code TEXT NOT NULL,
@@ -112,9 +114,11 @@ CREATE TABLE IF NOT EXISTS calidad_sanitaria (
   celulas NUMERIC,
   bacterias NUMERIC,
   origen TEXT,
-  synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (card_code, lab_date)
+  synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Migracion: antes habia UNIQUE (card_code, lab_date) que forzaba un solo valor por dia.
+ALTER TABLE calidad_sanitaria DROP CONSTRAINT IF EXISTS calidad_sanitaria_card_code_lab_date_key;
 
 CREATE INDEX IF NOT EXISTS idx_calidad_sanitaria_card_date
   ON calidad_sanitaria (card_code, lab_date DESC);

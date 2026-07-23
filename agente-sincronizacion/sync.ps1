@@ -201,16 +201,23 @@ function Invoke-DomainSync {
         $recordsFetched = $records.Count
         Write-Log "Total registros obtenidos de SAP ($($Domain.Name)): $recordsFetched"
 
-        # CALIDAD: varios analisis el mismo dia → promedio geometrico antes de enviar.
-        if ($Domain.DomainKey -eq 'calidad_sanitaria' -and $recordsFetched -gt 0) {
-            $before = $recordsFetched
-            $records = Aggregate-CalidadSanitariaByDay -Records $records
-            $recordsFetched = @($records).Count
-            Write-Log "CALIDAD consolidado por dia (prom. geom.): $before filas SAP → $recordsFetched dias"
-        }
-
+        # CALIDAD: se envian todos los analisis (varios por dia). El backend reemplaza
+        # por (card_code, lab_date); los lotes no deben partir un mismo dia.
         if ($recordsFetched -gt 0) {
-            $pushResult = Push-ToBackend -Config $Config -Records $records -IngestPath $Domain.IngestPath
+            $pushArgs = @{
+                Config     = $Config
+                Records    = $records
+                IngestPath = $Domain.IngestPath
+            }
+            if ($Domain.DomainKey -eq 'calidad_sanitaria') {
+                $pushArgs.GroupKeyFn = {
+                    param($r)
+                    $lab = [string]$r.lab_date
+                    if ($lab.Length -ge 10) { $lab = $lab.Substring(0, 10) }
+                    return "$($r.card_code)|$lab"
+                }
+            }
+            $pushResult = Push-ToBackend @pushArgs
             $recordsUpserted = [int]$pushResult.inserted + [int]$pushResult.updated
             $elapsed = ((Get-Date) - $startedAt).TotalSeconds
             $elapsedFormatted = '{0:N1}' -f $elapsed

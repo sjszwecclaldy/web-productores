@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { avgCalidadByDate, CHART_COLORS, formatChartDate, geometricMean, groupSumByDate } from '../chartUtils';
+import { avgCalidadByDate, CHART_COLORS, geometricMean, groupSanitariaByDay, groupSumByDate } from '../chartUtils';
 import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
@@ -108,25 +108,30 @@ export default function Resumen() {
   const litrosByDay = useMemo(() => groupSumByDate(remisiones, 'doc_date', 'quantity'), [remisiones]);
   const calidadChart = useMemo(() => avgCalidadByDate(calidad), [calidad]);
 
+  const sanitariaPorDia = useMemo(() => groupSanitariaByDay(calidadSan), [calidadSan]);
+
   const sanitariaSerie = useMemo(
     () =>
-      [...calidadSan]
-        .map((r) => ({
-          date: r.lab_date,
-          label: formatChartDate(r.lab_date),
-          celulas: r.celulas != null ? Number(r.celulas) : null,
-          bacterias: r.bacterias != null ? Number(r.bacterias) : null,
-        }))
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    [calidadSan]
+      sanitariaPorDia.map((r) => ({
+        date: r.date,
+        label: r.label,
+        celulas: r.celulas,
+        bacterias: r.bacterias,
+      })),
+    [sanitariaPorDia]
   );
+
+  const ultimaDiaSan = useMemo(() => {
+    if (!sanitariaPorDia.length) return null;
+    return [...sanitariaPorDia].sort((a, b) => b.date.localeCompare(a.date))[0];
+  }, [sanitariaPorDia]);
 
   const ultima = {
     litros: remisiones[0]?.quantity,
     grasa: calidad[0]?.fat,
     proteina: calidad[0]?.protein,
-    celulas: calidadSan[0]?.celulas,
-    bacterias: calidadSan[0]?.bacterias,
+    celulas: ultimaDiaSan?.celulas,
+    bacterias: ultimaDiaSan?.bacterias,
   };
 
   const promedio = useMemo(
@@ -136,6 +141,7 @@ export default function Resumen() {
         : null,
       grasa: avg(nums(calidad, 'fat')),
       proteina: avg(nums(calidad, 'protein')),
+      // Promedio del período: geo sobre todas las muestras (no sobre diarios).
       celulas: geometricMean(nums(calidadSan, 'celulas')),
       bacterias: geometricMean(nums(calidadSan, 'bacterias')),
     }),

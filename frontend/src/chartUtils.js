@@ -92,6 +92,37 @@ export function geometricMean(values) {
   return Math.exp(logSum / nums.length);
 }
 
+/**
+ * Agrupa análisis sanitarios por día (prom. geom. de células/bacterias).
+ * El promedio mensual debe calcularse sobre las filas crudas, no sobre estos diarios.
+ */
+export function groupSanitariaByDay(rows) {
+  const map = new Map();
+  for (const row of rows) {
+    const date = row.lab_date ? String(row.lab_date).slice(0, 10) : null;
+    if (!date) continue;
+    if (!map.has(date)) map.set(date, { celulas: [], bacterias: [] });
+    const bucket = map.get(date);
+    if (row.celulas != null && row.celulas !== '') {
+      const n = Number(row.celulas);
+      if (Number.isFinite(n)) bucket.celulas.push(n);
+    }
+    if (row.bacterias != null && row.bacterias !== '') {
+      const n = Number(row.bacterias);
+      if (Number.isFinite(n)) bucket.bacterias.push(n);
+    }
+  }
+  return [...map.entries()]
+    .map(([date, buckets]) => ({
+      lab_date: date,
+      date,
+      label: formatChartDate(date),
+      celulas: geometricMean(buckets.celulas),
+      bacterias: geometricMean(buckets.bacterias),
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export function dateDaysAgo(days) {
   const d = new Date();
   d.setDate(d.getDate() - days);
