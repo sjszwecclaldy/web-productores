@@ -8,7 +8,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { CHART_COLORS, domainCentered, formatMonthYear } from '../chartUtils';
+import { CHART_COLORS, domainCentered, formatMonthYear, formatYAxisTick } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt, fmtDate } from '../utils';
 
@@ -34,18 +34,15 @@ export default function LitrosLineChart({
   const domain = domainCentered(chartData.map((d) => d.total));
 
   function formatYTick(v) {
-    const n = Number(v);
-    if (!Number.isFinite(n)) return '';
     if (yTickDecimals != null) {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return '';
       return n.toLocaleString('es-AR', {
         minimumFractionDigits: yTickDecimals,
         maximumFractionDigits: yTickDecimals,
       });
     }
-    if (Math.abs(n) >= 100) {
-      return Math.round(n).toLocaleString('es-AR');
-    }
-    return n.toLocaleString('es-AR', { maximumFractionDigits: 1 });
+    return formatYAxisTick(v);
   }
 
   function handleClick(state) {
@@ -59,7 +56,7 @@ export default function LitrosLineChart({
     <ResponsiveContainer width="100%" height={ctxHeight ?? 280}>
       <LineChart
         data={chartData}
-        margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+        margin={{ top: 8, right: 12, left: 4, bottom: 0 }}
         onClick={handleClick}
         style={{ cursor: onDateSelect ? 'pointer' : undefined }}
       >
@@ -74,7 +71,7 @@ export default function LitrosLineChart({
           domain={domain}
           tick={{ fontSize: 11, fill: '#5a6d62' }}
           tickFormatter={formatYTick}
-          width={yTickDecimals != null ? 48 : 52}
+          width={56}
           allowDataOverflow
         />
         <Tooltip

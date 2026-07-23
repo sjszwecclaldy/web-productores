@@ -9,7 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { CHART_COLORS, domainCentered } from '../chartUtils';
+import { CHART_COLORS, domainCentered, formatYAxisTick } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
@@ -57,6 +57,7 @@ export default function RankingBarChart({
           type="number"
           domain={domain}
           tick={{ fontSize: 11, fill: '#5a6d62' }}
+          tickFormatter={formatYAxisTick}
           allowDataOverflow
         />
         <YAxis

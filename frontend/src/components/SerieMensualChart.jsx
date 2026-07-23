@@ -8,7 +8,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { CHART_COLORS, domainCentered, formatMonthYear } from '../chartUtils';
+import { CHART_COLORS, domainCentered, formatMonthYear, formatYAxisTick } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
@@ -31,7 +31,7 @@ export default function SerieMensualChart({
 
   return (
     <ResponsiveContainer width="100%" height={ctxHeight ?? 280}>
-      <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+      <LineChart data={chartData} margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} vertical={false} />
         <XAxis
           dataKey="mes"
@@ -40,7 +40,13 @@ export default function SerieMensualChart({
           minTickGap={8}
           tickFormatter={(m) => formatMonthYear(m)}
         />
-        <YAxis domain={domain} tick={{ fontSize: 11, fill: '#5a6d62' }} width={52} allowDataOverflow />
+        <YAxis
+          domain={domain}
+          tick={{ fontSize: 11, fill: '#5a6d62' }}
+          tickFormatter={formatYAxisTick}
+          width={56}
+          allowDataOverflow
+        />
         <Tooltip
           formatter={(v) => [`${fmt(v)}${unit ? ' ' + unit : ''}`, label]}
           labelFormatter={(m) => formatMonthYear(m)}

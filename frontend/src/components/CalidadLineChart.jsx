@@ -9,7 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { CHART_COLORS, DOMAIN_GRASA_PROTEINA, collectChartValues, domainCentered } from '../chartUtils';
+import { CHART_COLORS, DOMAIN_GRASA_PROTEINA, collectChartValues, domainCentered, formatYAxisTick } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt, fmtDate } from '../utils';
 
@@ -76,7 +76,7 @@ export default function CalidadLineChart({
     <ResponsiveContainer width="100%" height={ctxHeight ?? 280}>
       <LineChart
         data={data}
-        margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+        margin={{ top: 8, right: 8, left: 4, bottom: 0 }}
         onClick={handleClick}
         style={{ cursor: onDateSelect ? 'pointer' : undefined }}
       >
@@ -86,7 +86,13 @@ export default function CalidadLineChart({
           tick={{ fontSize: 11, fill: '#5a6d62' }}
           interval="preserveStartEnd"
         />
-        <YAxis domain={domain} tick={{ fontSize: 11, fill: '#5a6d62' }} width={40} allowDataOverflow />
+        <YAxis
+          domain={domain}
+          tick={{ fontSize: 11, fill: '#5a6d62' }}
+          tickFormatter={formatYAxisTick}
+          width={52}
+          allowDataOverflow
+        />
         <Tooltip
           formatter={(value, name) => {
             const s = lines.find((l) => l.key === name);

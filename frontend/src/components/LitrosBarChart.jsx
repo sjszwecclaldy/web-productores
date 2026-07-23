@@ -9,7 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { CHART_COLORS, domainCentered } from '../chartUtils';
+import { CHART_COLORS, domainCentered, formatYAxisTick } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt, fmtDate } from '../utils';
 
@@ -43,7 +43,7 @@ export default function LitrosBarChart({
     <ResponsiveContainer width="100%" height={ctxHeight ?? 280}>
       <BarChart
         data={data}
-        margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+        margin={{ top: 8, right: 8, left: 4, bottom: 0 }}
         onClick={handleClick}
         style={{ cursor: onDateSelect ? 'pointer' : undefined }}
       >
@@ -53,7 +53,13 @@ export default function LitrosBarChart({
           tick={{ fontSize: 11, fill: '#5a6d62' }}
           interval="preserveStartEnd"
         />
-        <YAxis domain={domain} tick={{ fontSize: 11, fill: '#5a6d62' }} width={48} allowDataOverflow />
+        <YAxis
+          domain={domain}
+          tick={{ fontSize: 11, fill: '#5a6d62' }}
+          tickFormatter={formatYAxisTick}
+          width={56}
+          allowDataOverflow
+        />
         <Tooltip
           formatter={(value) => [`${fmt(value)} L`, 'Litros']}
           labelFormatter={(l, p) => (p && p[0] && p[0].payload.date ? fmtDate(p[0].payload.date) : l)}

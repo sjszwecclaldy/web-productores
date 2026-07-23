@@ -12,7 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext, useMemo } from 'react';
-import { CHART_COLORS, LINE_COLORS, domainCentered, formatMonthYear, geometricMean } from '../chartUtils';
+import { CHART_COLORS, LINE_COLORS, domainCentered, formatMonthYear, formatYAxisTick, geometricMean } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
@@ -103,7 +103,7 @@ export default function MultiProductorChart({
   return (
     <>
       <ResponsiveContainer width="100%" height={lineHeight}>
-        <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+        <LineChart data={chartData} margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} vertical={false} />
           <XAxis
             dataKey="mes"
@@ -112,7 +112,13 @@ export default function MultiProductorChart({
             minTickGap={8}
             tickFormatter={(m) => formatMonthYear(m)}
           />
-          <YAxis domain={lineDomain} tick={{ fontSize: 11, fill: '#5a6d62' }} width={52} allowDataOverflow />
+          <YAxis
+            domain={lineDomain}
+            tick={{ fontSize: 11, fill: '#5a6d62' }}
+            tickFormatter={formatYAxisTick}
+            width={56}
+            allowDataOverflow
+          />
           <Tooltip
             formatter={(v, name) => [`${fmt(v)}${unit ? ' ' + unit : ''}`, name]}
             labelFormatter={(m) => formatMonthYear(m)}
@@ -160,7 +166,13 @@ export default function MultiProductorChart({
         <ResponsiveContainer width="100%" height={barHeight}>
           <BarChart data={barData} layout="vertical" margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} horizontal={false} />
-            <XAxis type="number" domain={barDomain} tick={{ fontSize: 11, fill: '#5a6d62' }} allowDataOverflow />
+            <XAxis
+              type="number"
+              domain={barDomain}
+              tick={{ fontSize: 11, fill: '#5a6d62' }}
+              tickFormatter={formatYAxisTick}
+              allowDataOverflow
+            />
             <YAxis type="category" dataKey="card_name" width={150} tick={{ fontSize: 11, fill: '#5a6d62' }} interval={0} />
             <Tooltip
               formatter={(v) => [`${fmt(v)}${unit ? ' ' + unit : ''}`, agg === 'avg' ? 'Promedio' : 'Total']}

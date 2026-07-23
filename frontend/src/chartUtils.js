@@ -19,6 +19,29 @@ export const LINE_COLORS = [
 export const DOMAIN_GRASA_PROTEINA = [2, 6];
 
 /**
+ * Etiqueta compacta del eje numérico (evita decimales largos que se cortan).
+ * Miles/millones se redondean; valores chicos hasta 2 decimales.
+ */
+export function formatYAxisTick(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '';
+  const abs = Math.abs(n);
+  if (abs >= 1e6) {
+    return `${(n / 1e6).toLocaleString('es-AR', { maximumFractionDigits: 1 })} M`;
+  }
+  if (abs >= 1000) {
+    return Math.round(n).toLocaleString('es-AR');
+  }
+  if (abs >= 100) {
+    return Math.round(n).toLocaleString('es-AR');
+  }
+  if (abs >= 10) {
+    return n.toLocaleString('es-AR', { maximumFractionDigits: 1 });
+  }
+  return n.toLocaleString('es-AR', { maximumFractionDigits: 2 });
+}
+
+/**
  * Dominio [min, max] con padding para centrar la serie y facilitar la comparación.
  * @param {Iterable} values números (ignora null/NaN)
  * @param {{ pad?: number }} opts pad = fracción del rango a cada lado (default 0.2)

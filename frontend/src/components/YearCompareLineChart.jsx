@@ -9,7 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useContext } from 'react';
-import { LINE_COLORS, collectChartValues, domainCentered } from '../chartUtils';
+import { LINE_COLORS, collectChartValues, domainCentered, formatYAxisTick } from '../chartUtils';
 import { ChartHeightContext } from './ChartHeightContext';
 import { fmt } from '../utils';
 
@@ -31,10 +31,16 @@ export default function YearCompareLineChart({
 
   return (
     <ResponsiveContainer width="100%" height={ctxHeight ?? 300}>
-      <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+      <LineChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#ccddd4" vertical={false} />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#5a6d62' }} />
-        <YAxis domain={domain} tick={{ fontSize: 11, fill: '#5a6d62' }} width={56} allowDataOverflow />
+        <YAxis
+          domain={domain}
+          tick={{ fontSize: 11, fill: '#5a6d62' }}
+          tickFormatter={formatYAxisTick}
+          width={56}
+          allowDataOverflow
+        />
         <Tooltip
           formatter={(v, name) => [`${fmt(v)}${unit ? ` ${unit}` : ''}`, name]}
           contentStyle={{ borderRadius: 8, border: '1px solid #ccddd4' }}
