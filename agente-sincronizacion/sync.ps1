@@ -201,6 +201,14 @@ function Invoke-DomainSync {
         $recordsFetched = $records.Count
         Write-Log "Total registros obtenidos de SAP ($($Domain.Name)): $recordsFetched"
 
+        # CALIDAD: varios analisis el mismo dia → promedio geometrico antes de enviar.
+        if ($Domain.DomainKey -eq 'calidad_sanitaria' -and $recordsFetched -gt 0) {
+            $before = $recordsFetched
+            $records = Aggregate-CalidadSanitariaByDay -Records $records
+            $recordsFetched = @($records).Count
+            Write-Log "CALIDAD consolidado por dia (prom. geom.): $before filas SAP → $recordsFetched dias"
+        }
+
         if ($recordsFetched -gt 0) {
             $pushResult = Push-ToBackend -Config $Config -Records $records -IngestPath $Domain.IngestPath
             $recordsUpserted = [int]$pushResult.inserted + [int]$pushResult.updated

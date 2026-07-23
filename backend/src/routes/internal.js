@@ -36,6 +36,73 @@ async function ensureProductor(client, cardCode, cardName) {
   );
 }
 
+// Promedio geométrico (solo valores > 0). Células / bacterias del mismo día.
+function geometricMean(values) {
+  const nums = [];
+  for (const v of values) {
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) nums.push(n);
+  }
+  if (!nums.length) return null;
+  const logSum = nums.reduce((s, n) => s + Math.log(n), 0);
+  return Math.exp(logSum / nums.length);
+}
+
+function normalizeLabDate(raw) {
+  if (raw == null || raw === '') return null;
+  const s = String(raw).trim();
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
+// Varios análisis SAP el mismo día → un registro con promedio geométrico de células/bacterias.
+function aggregateCalidadSanitariaByDay(records) {
+  const byKey = new Map();
+  for (const rec of records) {
+    const cardCode = String(rec.card_code || rec.CardCode || '').trim();
+    const labDate = normalizeLabDate(rec.lab_date ?? rec.U_LabDate);
+    if (!cardCode || !labDate) continue;
+    const key = `${cardCode}|${labDate}`;
+    if (!byKey.has(key)) {
+      byKey.set(key, {
+        card_code: cardCode,
+        card_name: rec.card_name || rec.CardName || null,
+        lab_date: labDate,
+        celulas: [],
+        bacterias: [],
+        origenes: [],
+      });
+    }
+    const g = byKey.get(key);
+    if (!g.card_name && (rec.card_name || rec.CardName)) {
+      g.card_name = rec.card_name || rec.CardName;
+    }
+    const cel = rec.celulas ?? rec.Celulas;
+    const bac = rec.bacterias ?? rec.Bacterias;
+    if (cel != null && cel !== '') g.celulas.push(cel);
+    if (bac != null && bac !== '') g.bacterias.push(bac);
+    const origen = rec.origen ?? rec.Origen;
+    if (origen != null && String(origen).trim() !== '') g.origenes.push(String(origen).trim());
+  }
+
+  return [...byKey.values()].map((g) => {
+    const uniqOrigen = [...new Set(g.origenes)];
+    let origen = null;
+    if (uniqOrigen.length === 1) origen = uniqOrigen[0];
+    else if (uniqOrigen.length > 1) origen = `${uniqOrigen.join(' / ')} (${g.celulas.length || g.bacterias.length || uniqOrigen.length})`;
+    else if (g.celulas.length > 1 || g.bacterias.length > 1) {
+      origen = `prom. geom. (${Math.max(g.celulas.length, g.bacterias.length)})`;
+    }
+    return {
+      card_code: g.card_code,
+      card_name: g.card_name,
+      lab_date: g.lab_date,
+      celulas: geometricMean(g.celulas),
+      bacterias: geometricMean(g.bacterias),
+      origen,
+    };
+  });
+}
+
 router.get('/sync-status', async (req, res) => {
   const domain = (req.query.domain || 'calidad_composicion').toString();
   try {
@@ -477,6 +544,9 @@ router.post('/ingest/calidad-sanitaria', async (req, res) => {
     return res.status(400).json({ error: 'Se espera un array de registros' });
   }
 
+  // Si SAP trae varios analisis el mismo dia, se consolida con promedio geometrico.
+  const aggregated = aggregateCalidadSanitariaByDay(records);
+
   const client = await pool.connect();
 
   try {
@@ -486,17 +556,17 @@ router.post('/ingest/calidad-sanitaria', async (req, res) => {
     let updated = 0;
     const seenProducers = new Set();
 
-    for (const rec of records) {
-      const cardCode = String(rec.card_code || rec.CardCode || '').trim();
+    for (const rec of aggregated) {
+      const cardCode = rec.card_code;
       if (!cardCode) continue;
 
-      const cardName = rec.card_name || rec.CardName || null;
+      const cardName = rec.card_name || null;
       if (!seenProducers.has(cardCode)) {
         await ensureProductor(client, cardCode, cardName);
         seenProducers.add(cardCode);
       }
 
-      const labDate = rec.lab_date ?? rec.U_LabDate;
+      const labDate = rec.lab_date;
       if (!labDate) continue;
 
       const result = await client.query(
@@ -513,9 +583,9 @@ router.post('/ingest/calidad-sanitaria', async (req, res) => {
         [
           cardCode,
           labDate,
-          rec.celulas ?? rec.Celulas ?? null,
-          rec.bacterias ?? rec.Bacterias ?? null,
-          rec.origen ?? rec.Origen ?? null,
+          rec.celulas,
+          rec.bacterias,
+          rec.origen,
         ]
       );
 
@@ -534,7 +604,7 @@ router.post('/ingest/calidad-sanitaria', async (req, res) => {
       console.error('controles calidad-sanitaria:', e.message);
     }
 
-    res.json({ inserted, updated });
+    res.json({ inserted, updated, aggregated_from: records.length });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('ingest calidad-sanitaria error:', err);

@@ -266,6 +266,75 @@ function Get-SapRecords {
     return ,@($records.ToArray())
 }
 
+function Get-GeometricMean {
+    param([object[]]$Values)
+    $nums = New-Object System.Collections.Generic.List[double]
+    foreach ($v in $Values) {
+        if ($null -eq $v -or "$v".Trim() -eq '') { continue }
+        $n = 0.0
+        if ([double]::TryParse([string]$v, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$n) -or
+            [double]::TryParse([string]$v, [ref]$n)) {
+            if ($n -gt 0) { [void]$nums.Add($n) }
+        }
+    }
+    if ($nums.Count -eq 0) { return $null }
+    $logSum = 0.0
+    foreach ($n in $nums) { $logSum += [math]::Log($n) }
+    return [math]::Exp($logSum / $nums.Count)
+}
+
+# Consolida varios analisis CALIDAD del mismo productor+dia con promedio geometrico.
+function Aggregate-CalidadSanitariaByDay {
+    param([array]$Records)
+    if ($null -eq $Records -or $Records.Count -eq 0) { return ,@() }
+
+    $groups = @{}
+    foreach ($rec in $Records) {
+        $card = [string]$rec.card_code
+        if ([string]::IsNullOrWhiteSpace($card)) { continue }
+        $lab = [string]$rec.lab_date
+        if ([string]::IsNullOrWhiteSpace($lab)) { continue }
+        if ($lab.Length -ge 10) { $lab = $lab.Substring(0, 10) }
+        $key = "$card|$lab"
+        if (-not $groups.ContainsKey($key)) {
+            $groups[$key] = @{
+                card_code  = $card
+                card_name  = $rec.card_name
+                lab_date   = $lab
+                celulas    = New-Object System.Collections.ArrayList
+                bacterias  = New-Object System.Collections.ArrayList
+                origenes   = New-Object System.Collections.ArrayList
+            }
+        }
+        $g = $groups[$key]
+        if (-not $g.card_name -and $rec.card_name) { $g.card_name = $rec.card_name }
+        if ($null -ne $rec.celulas -and "$($rec.celulas)".Trim() -ne '') { [void]$g.celulas.Add($rec.celulas) }
+        if ($null -ne $rec.bacterias -and "$($rec.bacterias)".Trim() -ne '') { [void]$g.bacterias.Add($rec.bacterias) }
+        if ($null -ne $rec.origen -and "$($rec.origen)".Trim() -ne '') { [void]$g.origenes.Add([string]$rec.origen.Trim()) }
+    }
+
+    $out = New-Object System.Collections.ArrayList
+    foreach ($key in $groups.Keys) {
+        $g = $groups[$key]
+        $uniqOrigen = @($g.origenes | Select-Object -Unique)
+        $origen = $null
+        $n = [Math]::Max($g.celulas.Count, $g.bacterias.Count)
+        if ($uniqOrigen.Count -eq 1) { $origen = $uniqOrigen[0] }
+        elseif ($uniqOrigen.Count -gt 1) { $origen = ($uniqOrigen -join ' / ') + " ($n)" }
+        elseif ($n -gt 1) { $origen = "prom. geom. ($n)" }
+
+        [void]$out.Add(@{
+            card_code  = $g.card_code
+            card_name  = $g.card_name
+            lab_date   = $g.lab_date
+            celulas    = Get-GeometricMean -Values @($g.celulas.ToArray())
+            bacterias  = Get-GeometricMean -Values @($g.bacterias.ToArray())
+            origen     = $origen
+        })
+    }
+    return ,@($out.ToArray())
+}
+
 function Push-ToBackend {
     param([hashtable]$Config, [array]$Records, [string]$IngestPath)
     $backendUrl = (Get-ConfigValue -Config $Config -Name 'BACKEND_URL' -Required $true).TrimEnd('/')
