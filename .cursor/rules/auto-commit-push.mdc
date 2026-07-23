@@ -1,0 +1,14 @@
+---
+description: Tras cambios, commit y push a main sin preguntar
+alwaysApply: true
+---
+
+# Commit y push automático
+
+Cuando termines un cambio solicitado por el usuario en este repo:
+
+1. Hacé commit descriptivo (autor: `sjszwecclaldy` / `sjszwec.claldy@gmail.com` vía env, sin tocar git config).
+2. Pusheá a `origin main` (usar smart-mode approval del push si hace falta).
+3. **No preguntes** si quiere commit/push; asumilo siempre salvo que diga explícitamente lo contrario.
+4. No incluyas secretos (`.env`, etc.) ni archivos no relacionados (p. ej. `package-lock.json` no pedido).
+---

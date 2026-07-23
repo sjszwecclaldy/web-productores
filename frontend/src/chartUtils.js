@@ -199,7 +199,7 @@ export function fillMonthGaps(series) {
   return out;
 }
 
-export function groupAvgByMonth(rows, dateKey, valueKey) {
+export function groupAvgByMonth(rows, dateKey, valueKey, { geometric = false } = {}) {
   const map = new Map();
   for (const row of rows) {
     const date = row[dateKey];
@@ -207,16 +207,48 @@ export function groupAvgByMonth(rows, dateKey, valueKey) {
     const month = String(date).slice(0, 7);
     const val = Number(row[valueKey]);
     if (!Number.isFinite(val)) continue;
-    if (!map.has(month)) map.set(month, { sum: 0, n: 0 });
+    if (geometric && val <= 0) continue;
+    if (!map.has(month)) {
+      map.set(month, geometric ? { logSum: 0, n: 0 } : { sum: 0, n: 0 });
+    }
     const bucket = map.get(month);
-    bucket.sum += val;
-    bucket.n += 1;
+    if (geometric) {
+      bucket.logSum += Math.log(val);
+      bucket.n += 1;
+    } else {
+      bucket.sum += val;
+      bucket.n += 1;
+    }
   }
   return [...map.entries()]
-    .map(([month, { sum, n }]) => ({
+    .map(([month, bucket]) => {
+      const total = bucket.n
+        ? geometric
+          ? Math.exp(bucket.logSum / bucket.n)
+          : bucket.sum / bucket.n
+        : null;
+      return {
+        month,
+        label: formatMonthLabel(month),
+        total: total != null ? Math.round(total * 100) / 100 : null,
+      };
+    })
+    .sort((a, b) => a.month.localeCompare(b.month));
+}
+
+export function groupCountByMonth(rows, dateKey) {
+  const map = new Map();
+  for (const row of rows) {
+    const date = row[dateKey];
+    if (!date) continue;
+    const month = String(date).slice(0, 7);
+    map.set(month, (map.get(month) || 0) + 1);
+  }
+  return [...map.entries()]
+    .map(([month, total]) => ({
       month,
       label: formatMonthLabel(month),
-      total: Math.round((sum / n) * 100) / 100,
+      total,
     }))
     .sort((a, b) => a.month.localeCompare(b.month));
 }

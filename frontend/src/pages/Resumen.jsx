@@ -1,11 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearToken } from '../api';
-import { avgCalidadByDate, CHART_COLORS, geometricMean, groupSanitariaByDay, groupSumByDate } from '../chartUtils';
-import { apiFromDate, buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
+import {
+  avgCalidadByDate,
+  CHART_COLORS,
+  formatMonthLabel,
+  geometricMean,
+  groupAvgByMonth,
+  groupCountByMonth,
+  groupSanitariaByDay,
+  groupSumByDate,
+  groupSumByMonth,
+} from '../chartUtils';
+import { buildQueryFrom, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
+import ExportButton from '../components/ExportButton';
 import LitrosLineChart from '../components/LitrosLineChart';
 import LoadingScreen from '../components/LoadingScreen';
 import PeriodFilter from '../components/PeriodFilter';
@@ -17,6 +28,27 @@ const nums = (rows, key) => rows.filter((r) => r[key] != null).map((r) => Number
 const fmtL = (v) => (v != null ? `${fmt(v)} L` : '—');
 const fmtP = (v) => (v != null ? `${fmt(v)} %` : '—');
 const fmtN = (v) => (v != null ? fmt(v) : '—');
+
+const EXPORT_MENSUAL_COLS = [
+  { header: 'Mes', value: (r) => r.label },
+  { header: 'Litros', value: (r) => r.litros },
+  { header: 'Entregas', value: (r) => r.entregas },
+  { header: 'Grasa %', value: (r) => r.grasa },
+  { header: 'Proteína %', value: (r) => r.proteina },
+  { header: 'Lactosa %', value: (r) => r.lactosa },
+  { header: 'Sólidos totales %', value: (r) => r.solidos },
+  { header: 'Punto congelación', value: (r) => r.fpd },
+  { header: 'Caseína %', value: (r) => r.caseina },
+  { header: 'Urea', value: (r) => r.urea },
+  { header: 'Células somáticas (miles)', value: (r) => r.celulas },
+  { header: 'Recuento bacteriano (miles)', value: (r) => r.bacterias },
+];
+
+function toMonthMap(series) {
+  const map = new Map();
+  for (const row of series) map.set(row.month, row.total);
+  return map;
+}
 
 // Un indicador con su valor de ultima entrega y su promedio del periodo.
 function MetricCard({ icon, name, ultima, promedio }) {
@@ -148,6 +180,56 @@ export default function Resumen() {
     [litrosByDay, calidad, calidadSan]
   );
 
+  const resumenMensual = useMemo(() => {
+    const litros = toMonthMap(groupSumByMonth(remisiones, 'doc_date', 'quantity'));
+    const entregas = toMonthMap(groupCountByMonth(remisiones, 'doc_date'));
+    const grasa = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'fat'));
+    const proteina = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'protein'));
+    const lactosa = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'lactose'));
+    const solidos = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'ts'));
+    const fpd = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'fpd'));
+    const caseina = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'casein'));
+    const urea = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'urea'));
+    const celulas = toMonthMap(
+      groupAvgByMonth(calidadSan, 'lab_date', 'celulas', { geometric: true })
+    );
+    const bacterias = toMonthMap(
+      groupAvgByMonth(calidadSan, 'lab_date', 'bacterias', { geometric: true })
+    );
+
+    const months = new Set([
+      ...litros.keys(),
+      ...entregas.keys(),
+      ...grasa.keys(),
+      ...proteina.keys(),
+      ...lactosa.keys(),
+      ...solidos.keys(),
+      ...fpd.keys(),
+      ...caseina.keys(),
+      ...urea.keys(),
+      ...celulas.keys(),
+      ...bacterias.keys(),
+    ]);
+
+    return [...months]
+      .sort((a, b) => a.localeCompare(b))
+      .map((month) => ({
+        month,
+        label: formatMonthLabel(month),
+        litros: litros.get(month) ?? null,
+        entregas: entregas.get(month) ?? null,
+        grasa: grasa.get(month) ?? null,
+        proteina: proteina.get(month) ?? null,
+        lactosa: lactosa.get(month) ?? null,
+        solidos: solidos.get(month) ?? null,
+        fpd: fpd.get(month) ?? null,
+        caseina: caseina.get(month) ?? null,
+        urea: urea.get(month) ?? null,
+        celulas: celulas.get(month) ?? null,
+        bacterias: bacterias.get(month) ?? null,
+      }));
+  }, [remisiones, calidad, calidadSan]);
+
   const indicadores = [
     { icon: '🥛', name: 'Litros', u: fmtL(ultima.litros), p: fmtL(promedio.litros) },
     { icon: '🧪', name: 'Grasa', u: fmtP(ultima.grasa), p: fmtP(promedio.grasa) },
@@ -214,6 +296,52 @@ export default function Resumen() {
           </ChartPanel>
         </div>
 
+        <div className="table-toolbar">
+          <h3 className="section-title" style={{ margin: 0 }}>Resumen mensual</h3>
+          <ExportButton filename="resumen-mensual.xlsx" columns={EXPORT_MENSUAL_COLS} rows={resumenMensual} />
+        </div>
+        <div className="table-wrap">
+          {resumenMensual.length === 0 ? (
+            <div className="empty-state">No hay datos para el período seleccionado.</div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Mes</th>
+                  <th className="num">Litros</th>
+                  <th className="num">Entregas</th>
+                  <th className="num">Grasa %</th>
+                  <th className="num">Proteína %</th>
+                  <th className="num">Lactosa %</th>
+                  <th className="num">Sólidos %</th>
+                  <th className="num">Pto. cong.</th>
+                  <th className="num">Caseína %</th>
+                  <th className="num">Urea</th>
+                  <th className="num">Células</th>
+                  <th className="num">Bacterias</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resumenMensual.map((r) => (
+                  <tr key={r.month}>
+                    <td>{r.label}</td>
+                    <td className="num">{fmtN(r.litros)}</td>
+                    <td className="num">{fmtN(r.entregas)}</td>
+                    <td className="num">{fmtN(r.grasa)}</td>
+                    <td className="num">{fmtN(r.proteina)}</td>
+                    <td className="num">{fmtN(r.lactosa)}</td>
+                    <td className="num">{fmtN(r.solidos)}</td>
+                    <td className="num">{fmtN(r.fpd)}</td>
+                    <td className="num">{fmtN(r.caseina)}</td>
+                    <td className="num">{fmtN(r.urea)}</td>
+                    <td className="num">{fmtN(r.celulas)}</td>
+                    <td className="num">{fmtN(r.bacterias)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </main>
     </div>
   );
