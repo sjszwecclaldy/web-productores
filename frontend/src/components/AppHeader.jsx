@@ -5,6 +5,7 @@ import {
   clearToken,
   getCardName,
   isAdmin,
+  getAdminCardCode,
   getAdminCardName,
   setAdminProducer,
 } from '../api';
@@ -45,6 +46,11 @@ function ProducerSelector() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const seleccionado = getAdminCardName();
+  const codigo = getAdminCardCode();
+  const etiquetaSeleccionado =
+    seleccionado && codigo
+      ? `${seleccionado} (${codigo})`
+      : seleccionado || codigo || '';
 
   useEffect(() => {
     let active = true;
@@ -74,7 +80,7 @@ function ProducerSelector() {
       <input
         className="producer-combo__input"
         type="text"
-        placeholder={seleccionado || 'Buscar productor…'}
+        placeholder={etiquetaSeleccionado || 'Buscar productor…'}
         value={q}
         onChange={(e) => {
           setQ(e.target.value);
