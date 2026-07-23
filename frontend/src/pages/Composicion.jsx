@@ -44,7 +44,12 @@ const EXPORT_COLS = [
   { header: 'Urea', value: (r) => r.urea },
 ];
 
-function ResumenCard({ title, data }) {
+// Lactosa, ST, FPD, Caseína y Urea recién se miden desde julio 2026; antes no se muestran.
+const CAMPOS_EXT_DESDE = '2026-07-01';
+const KEYS_EXT = ['lactose', 'ts', 'fpd', 'casein', 'urea'];
+const esExtendido = (fecha) => String(fecha || '').slice(0, 10) >= CAMPOS_EXT_DESDE;
+
+function ResumenCard({ title, data, mostrarExt = true }) {
   if (!data) {
     return (
       <div className="stat-card">
@@ -54,6 +59,8 @@ function ResumenCard({ title, data }) {
     );
   }
 
+  const metrics = mostrarExt ? METRICS : METRICS.filter((m) => !KEYS_EXT.includes(m.key));
+
   return (
     <div className="stat-card">
       <h3>{title}</h3>
@@ -62,7 +69,7 @@ function ResumenCard({ title, data }) {
           Fecha: {fmtDate(data.collection_date)}
         </p>
       )}
-      {METRICS.map(({ key, label }) => (
+      {metrics.map(({ key, label }) => (
         <div className="stat-row" key={key}>
           <span>{label}</span>
           <span className="value">{fmt(data[key])}</span>
@@ -72,17 +79,22 @@ function ResumenCard({ title, data }) {
   );
 }
 
-function CompoRow({ r }) {
+function CompoRow({ r, mostrarExt }) {
+  const ext = esExtendido(r.collection_date);
   return (
     <>
       <td>{fmtDate(r.collection_date)}</td>
       <td className="num">{fmt(r.fat)}</td>
       <td className="num">{fmt(r.protein)}</td>
-      <td className="num">{fmt(r.lactose)}</td>
-      <td className="num">{fmt(r.ts)}</td>
-      <td className="num">{fmt(r.fpd)}</td>
-      <td className="num">{fmt(r.casein)}</td>
-      <td className="num">{fmt(r.urea)}</td>
+      {mostrarExt && (
+        <>
+          <td className="num">{ext ? fmt(r.lactose) : '—'}</td>
+          <td className="num">{ext ? fmt(r.ts) : '—'}</td>
+          <td className="num">{ext ? fmt(r.fpd) : '—'}</td>
+          <td className="num">{ext ? fmt(r.casein) : '—'}</td>
+          <td className="num">{ext ? fmt(r.urea) : '—'}</td>
+        </>
+      )}
     </>
   );
 }
@@ -157,6 +169,7 @@ export default function Composicion() {
   );
 
   const ultimo = selectedDate ? avgCalidadSnapshot(selectedRows) : registros[0] || null;
+  const fechaMuestra = selectedDate || registros[0]?.collection_date || null;
 
   const promedioPeriodo = useMemo(() => avgCalidadSnapshot(registros), [registros]);
 
@@ -172,6 +185,29 @@ export default function Composicion() {
     const base = selectedDate ? selectedRows : registros;
     return base.filter((r) => !isCurrentMonth(r.collection_date));
   }, [selectedDate, selectedRows, registros]);
+
+  // Mostrar columnas extendidas (lactosa, ST, FPD, caseína, urea) sólo si hay datos desde julio 2026.
+  const mostrarExt = useMemo(
+    () => registros.some((r) => esExtendido(r.collection_date)),
+    [registros]
+  );
+
+  const exportCols = useMemo(() => {
+    const base = [
+      { header: 'Fecha', value: (r) => fmtDate(r.collection_date) },
+      { header: 'Grasa', value: (r) => r.fat },
+      { header: 'Proteína', value: (r) => r.protein },
+    ];
+    if (!mostrarExt) return base;
+    return [
+      ...base,
+      { header: 'Lactosa', value: (r) => (esExtendido(r.collection_date) ? r.lactose : '') },
+      { header: 'Sólidos totales', value: (r) => (esExtendido(r.collection_date) ? r.ts : '') },
+      { header: 'Punto congelación', value: (r) => (esExtendido(r.collection_date) ? r.fpd : '') },
+      { header: 'Caseína', value: (r) => (esExtendido(r.collection_date) ? r.casein : '') },
+      { header: 'Urea', value: (r) => (esExtendido(r.collection_date) ? r.urea : '') },
+    ];
+  }, [mostrarExt]);
 
   const { visibles, restantes, abierto, toggle } = useColapsable(historico, 10);
 
@@ -205,8 +241,12 @@ export default function Composicion() {
           <div className="gauges-row">
             <QualityGauge label="Grasa" value={ultimo?.fat} max={6} />
             <QualityGauge label="Proteina" value={ultimo?.protein} max={5} />
-            <QualityGauge label="Lactosa" value={ultimo?.lactose} max={6} />
-            <QualityGauge label="Solidos totales" value={ultimo?.ts} max={14} />
+            {fechaMuestra && esExtendido(fechaMuestra) && (
+              <>
+                <QualityGauge label="Lactosa" value={ultimo?.lactose} max={6} />
+                <QualityGauge label="Solidos totales" value={ultimo?.ts} max={14} />
+              </>
+            )}
           </div>
         </ChartPanel>
 
@@ -214,6 +254,7 @@ export default function Composicion() {
           <ResumenCard
             title="Promedio del período"
             data={promedioPeriodo ? { ...promedioPeriodo, collection_date: null } : null}
+            mostrarExt={mostrarExt}
           />
         </div>
 
@@ -246,11 +287,15 @@ export default function Composicion() {
                     <th>Fecha</th>
                     <th className="num">Grasa</th>
                     <th className="num">Proteína</th>
-                    <th className="num">Lactosa</th>
-                    <th className="num">ST</th>
-                    <th className="num">FPD</th>
-                    <th className="num">Caseína</th>
-                    <th className="num">Urea</th>
+                    {mostrarExt && (
+                      <>
+                        <th className="num">Lactosa</th>
+                        <th className="num">ST</th>
+                        <th className="num">FPD</th>
+                        <th className="num">Caseína</th>
+                        <th className="num">Urea</th>
+                      </>
+                    )}
                     <th>Estado</th>
                   </tr>
                 </thead>
@@ -260,7 +305,7 @@ export default function Composicion() {
                       key={`mc-${r.collection_date}-${i}`}
                       className={highlight && String(r.collection_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
                     >
-                      <CompoRow r={r} />
+                      <CompoRow r={r} mostrarExt={mostrarExt} />
                       <td><span className="badge badge--pendiente">Pendiente de validación</span></td>
                     </tr>
                   ))}
@@ -272,7 +317,7 @@ export default function Composicion() {
 
         <div className="table-toolbar">
           <h3 className="section-title" style={{ margin: 0 }}>Histórico</h3>
-          <ExportButton filename="composicion.xlsx" columns={EXPORT_COLS} rows={registros} />
+          <ExportButton filename="composicion.xlsx" columns={exportCols} rows={registros} />
         </div>
         <div className="table-wrap">
           {historico.length === 0 ? (
@@ -284,11 +329,15 @@ export default function Composicion() {
                   <th>Fecha</th>
                   <th className="num">Grasa</th>
                   <th className="num">Proteína</th>
-                  <th className="num">Lactosa</th>
-                  <th className="num">ST</th>
-                  <th className="num">FPD</th>
-                  <th className="num">Caseína</th>
-                  <th className="num">Urea</th>
+                  {mostrarExt && (
+                    <>
+                      <th className="num">Lactosa</th>
+                      <th className="num">ST</th>
+                      <th className="num">FPD</th>
+                      <th className="num">Caseína</th>
+                      <th className="num">Urea</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -297,7 +346,7 @@ export default function Composicion() {
                     key={`${r.collection_date}-${i}`}
                     className={highlight && String(r.collection_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
                   >
-                    <CompoRow r={r} />
+                    <CompoRow r={r} mostrarExt={mostrarExt} />
                   </tr>
                 ))}
               </tbody>
