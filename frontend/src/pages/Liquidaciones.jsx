@@ -194,7 +194,7 @@ export default function Liquidaciones() {
                 <thead>
                   <tr>
                     <th>Fecha</th>
-                    <th>Referencia</th>
+                    <th className="num">Referencia</th>
                     <th className="num">Litros</th>
                     <th className="num">Importe Bruto</th>
                     <th className="num">IMEBA</th>
@@ -208,7 +208,14 @@ export default function Liquidaciones() {
                 <tbody>
                   {mesCorriente.map((r, i) => (
                     <tr key={`mc-${r.num_at_card}-${r.doc_date}-${i}`}>
-                      <LiqRow r={r} />
+                      <td>{fmtDate(r.doc_date)}</td>
+                      <td className="num">{r.num_at_card}</td>
+                      <td className="num">{fmt(r.cantidad)}</td>
+                      <td className="num">{fmt(r.total)}</td>
+                      <td className="num">{fmt(r.imeba)}</td>
+                      <td className="num">{fmt(r.inia)}</td>
+                      <td className="num">{fmt(r.aftosa_usd)}</td>
+                      <td className="num">{fmt(r.enferm_usd)}</td>
                       <td><span className="badge badge--pendiente">Pendiente de validación</span></td>
                       <td className="num">{fmt(calcImporteNeto(r))}</td>
                     </tr>
@@ -235,7 +242,7 @@ export default function Liquidaciones() {
               <thead>
                 <tr>
                   <th>Fecha</th>
-                  <th>Referencia</th>
+                  <th className="num">Referencia</th>
                   <th className="num">Litros</th>
                   <th className="num">Importe Bruto</th>
                   <th className="num">IMEBA</th>

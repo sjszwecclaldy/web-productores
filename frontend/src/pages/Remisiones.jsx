@@ -255,7 +255,7 @@ export default function Remisiones() {
                 <thead>
                   <tr>
                     <th>Fecha</th>
-                    <th>Remito</th>
+                    <th className="num">Remito</th>
                     <th className="num">Litros</th>
                     <th className="num">Temperatura</th>
                     <th>Antibióticos</th>
@@ -269,7 +269,7 @@ export default function Remisiones() {
                       className={highlight && String(r.doc_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
                     >
                       <td>{fmtDate(r.doc_date)}</td>
-                      <td>{r.doc_num}</td>
+                      <td className="num">{r.doc_num}</td>
                       <td className="num">{fmt(r.quantity)}</td>
                       <td className="num">{fmt(r.temperatura)}</td>
                       <td>{r.antibiotico || '—'}</td>
@@ -298,7 +298,7 @@ export default function Remisiones() {
               <thead>
                 <tr>
                   <th>Fecha</th>
-                  <th>Remito</th>
+                  <th className="num">Remito</th>
                   <th className="num">Litros</th>
                   <th className="num">Temperatura</th>
                   <th>Antibióticos</th>
@@ -311,7 +311,7 @@ export default function Remisiones() {
                     className={highlight && String(r.doc_date).slice(0, 10) === highlight ? 'row-highlight' : undefined}
                   >
                     <td>{fmtDate(r.doc_date)}</td>
-                    <td>{r.doc_num}</td>
+                    <td className="num">{r.doc_num}</td>
                     <td className="num">{fmt(r.quantity)}</td>
                     <td className="num">{fmt(r.temperatura)}</td>
                     <td>{r.antibiotico || '—'}</td>

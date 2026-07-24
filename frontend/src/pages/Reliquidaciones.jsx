@@ -237,7 +237,7 @@ export default function Reliquidaciones() {
               <thead>
                 <tr>
                   <th>Fecha</th>
-                  <th>Documento</th>
+                  <th className="num">Documento</th>
                   <th>Concepto</th>
                   <th className="num">Importe Bruto</th>
                   <th className="num">Retención</th>
@@ -248,7 +248,7 @@ export default function Reliquidaciones() {
                 {visibles.map((r, i) => (
                   <tr key={`${r.doc_num}-${i}`}>
                     <td>{fmtDate(r.doc_date)}</td>
-                    <td>{r.doc_num}</td>
+                    <td className="num">{r.doc_num}</td>
                     <td>{r.descripcion || ''}</td>
                     <td className="num">{fmt(r.line_total)}</td>
                     <td className="num">{fmt(r.retencion)}</td>
