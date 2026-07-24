@@ -258,7 +258,7 @@ export default function Remisiones() {
                     <th className="num">Remito</th>
                     <th className="num">Litros</th>
                     <th className="num">Temperatura</th>
-                    <th>Antibióticos</th>
+                    <th className="num">Antibióticos</th>
                     <th>Estado</th>
                   </tr>
                 </thead>
@@ -272,7 +272,7 @@ export default function Remisiones() {
                       <td className="num">{r.doc_num}</td>
                       <td className="num">{fmt(r.quantity)}</td>
                       <td className="num">{fmt(r.temperatura)}</td>
-                      <td>{r.antibiotico || '—'}</td>
+                      <td className="num">{r.antibiotico || '—'}</td>
                       <td><span className="badge badge--pendiente">Pendiente de validación</span></td>
                     </tr>
                   ))}
@@ -301,7 +301,7 @@ export default function Remisiones() {
                   <th className="num">Remito</th>
                   <th className="num">Litros</th>
                   <th className="num">Temperatura</th>
-                  <th>Antibióticos</th>
+                  <th className="num">Antibióticos</th>
                 </tr>
               </thead>
               <tbody>
@@ -314,7 +314,7 @@ export default function Remisiones() {
                     <td className="num">{r.doc_num}</td>
                     <td className="num">{fmt(r.quantity)}</td>
                     <td className="num">{fmt(r.temperatura)}</td>
-                    <td>{r.antibiotico || '—'}</td>
+                    <td className="num">{r.antibiotico || '—'}</td>
                   </tr>
                 ))}
               </tbody>
