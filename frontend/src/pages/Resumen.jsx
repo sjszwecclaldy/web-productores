@@ -20,6 +20,8 @@ import ExportButton from '../components/ExportButton';
 import LitrosLineChart from '../components/LitrosLineChart';
 import LoadingScreen from '../components/LoadingScreen';
 import PeriodFilter from '../components/PeriodFilter';
+import VerMasButton from '../components/VerMasButton';
+import { useColapsable } from '../hooks/useColapsable';
 import { loadPeriodo, savePeriodo } from '../periodoStore';
 
 const avg = (arr) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null);
@@ -230,6 +232,9 @@ export default function Resumen() {
       }));
   }, [allRemisiones, allCalidad, allCalidadSan]);
 
+  const { visibles: mesesVisibles, restantes: mesesRestantes, abierto: mesesAbierto, toggle: toggleMeses } =
+    useColapsable(resumenMensual, 10);
+
   const indicadores = [
     { icon: '🥛', name: 'Litros', u: fmtL(ultima.litros), p: fmtL(promedio.litros) },
     { icon: '🧪', name: 'Grasa', u: fmtP(ultima.grasa), p: fmtP(promedio.grasa) },
@@ -318,7 +323,7 @@ export default function Resumen() {
                 </tr>
               </thead>
               <tbody>
-                {resumenMensual.map((r) => (
+                {mesesVisibles.map((r) => (
                   <tr key={r.month}>
                     <td>{r.label}</td>
                     <td className="num">{fmtN(r.litros)}</td>
@@ -334,6 +339,7 @@ export default function Resumen() {
             </table>
           )}
         </div>
+        <VerMasButton abierto={mesesAbierto} restantes={mesesRestantes} onToggle={toggleMeses} />
       </main>
     </div>
   );
