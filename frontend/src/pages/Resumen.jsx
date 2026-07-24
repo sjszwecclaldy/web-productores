@@ -12,7 +12,7 @@ import {
   groupSumByDate,
   groupSumByMonth,
 } from '../chartUtils';
-import { buildQueryFrom, filterFromMinDate, fmt, fmtDate } from '../utils';
+import { buildQueryFrom, DATA_FROM_DATE, filterFromMinDate, fmt, fmtDate } from '../utils';
 import AppHeader from '../components/AppHeader';
 import CalidadLineChart from '../components/CalidadLineChart';
 import ChartPanel from '../components/ChartPanel';
@@ -35,11 +35,7 @@ const EXPORT_MENSUAL_COLS = [
   { header: 'Entregas', value: (r) => r.entregas },
   { header: 'Grasa %', value: (r) => r.grasa },
   { header: 'Proteína %', value: (r) => r.proteina },
-  { header: 'Lactosa %', value: (r) => r.lactosa },
   { header: 'Sólidos totales %', value: (r) => r.solidos },
-  { header: 'Punto congelación', value: (r) => r.fpd },
-  { header: 'Caseína %', value: (r) => r.caseina },
-  { header: 'Urea', value: (r) => r.urea },
   { header: 'Células somáticas (miles)', value: (r) => r.celulas },
   { header: 'Recuento bacteriano (miles)', value: (r) => r.bacterias },
 ];
@@ -75,6 +71,10 @@ export default function Resumen() {
   const [remisiones, setRemisiones] = useState([]);
   const [calidad, setCalidad] = useState([]);
   const [calidadSan, setCalidadSan] = useState([]);
+  // Historial completo para la tabla mensual (no depende del filtro de período).
+  const [allRemisiones, setAllRemisiones] = useState([]);
+  const [allCalidad, setAllCalidad] = useState([]);
+  const [allCalidadSan, setAllCalidadSan] = useState([]);
   const [vencRefre, setVencRefre] = useState(null);
   const periodoInit = loadPeriodo();
   const [activePreset, setActivePreset] = useState(periodoInit.preset);
@@ -86,6 +86,18 @@ export default function Resumen() {
   async function loadVencimiento() {
     const data = await api('/api/vencimientos');
     setVencRefre(data.data?.venc_refre || null);
+  }
+
+  async function loadHistorico() {
+    const qs = `from=${DATA_FROM_DATE}`;
+    const [remData, calData, sanData] = await Promise.all([
+      api(`/api/remisiones?${qs}`),
+      api(`/api/calidad-composicion?${qs}`),
+      api(`/api/calidad-sanitaria?${qs}`),
+    ]);
+    setAllRemisiones(filterFromMinDate(remData.data, 'doc_date'));
+    setAllCalidad(filterFromMinDate(calData.data, 'collection_date'));
+    setAllCalidadSan(filterFromMinDate(sanData.data, 'lab_date'));
   }
 
   async function loadAll(f = from, t = to) {
@@ -106,7 +118,7 @@ export default function Resumen() {
   useEffect(() => {
     async function init() {
       try {
-        await Promise.all([loadAll(), loadVencimiento()]);
+        await Promise.all([loadAll(), loadHistorico(), loadVencimiento()]);
       } catch (err) {
         if (err.message.includes('Token')) {
           clearToken();
@@ -181,20 +193,16 @@ export default function Resumen() {
   );
 
   const resumenMensual = useMemo(() => {
-    const litros = toMonthMap(groupSumByMonth(remisiones, 'doc_date', 'quantity'));
-    const entregas = toMonthMap(groupCountByMonth(remisiones, 'doc_date'));
-    const grasa = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'fat'));
-    const proteina = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'protein'));
-    const lactosa = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'lactose'));
-    const solidos = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'ts'));
-    const fpd = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'fpd'));
-    const caseina = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'casein'));
-    const urea = toMonthMap(groupAvgByMonth(calidad, 'collection_date', 'urea'));
+    const litros = toMonthMap(groupSumByMonth(allRemisiones, 'doc_date', 'quantity'));
+    const entregas = toMonthMap(groupCountByMonth(allRemisiones, 'doc_date'));
+    const grasa = toMonthMap(groupAvgByMonth(allCalidad, 'collection_date', 'fat'));
+    const proteina = toMonthMap(groupAvgByMonth(allCalidad, 'collection_date', 'protein'));
+    const solidos = toMonthMap(groupAvgByMonth(allCalidad, 'collection_date', 'ts'));
     const celulas = toMonthMap(
-      groupAvgByMonth(calidadSan, 'lab_date', 'celulas', { geometric: true })
+      groupAvgByMonth(allCalidadSan, 'lab_date', 'celulas', { geometric: true })
     );
     const bacterias = toMonthMap(
-      groupAvgByMonth(calidadSan, 'lab_date', 'bacterias', { geometric: true })
+      groupAvgByMonth(allCalidadSan, 'lab_date', 'bacterias', { geometric: true })
     );
 
     const months = new Set([
@@ -202,17 +210,13 @@ export default function Resumen() {
       ...entregas.keys(),
       ...grasa.keys(),
       ...proteina.keys(),
-      ...lactosa.keys(),
       ...solidos.keys(),
-      ...fpd.keys(),
-      ...caseina.keys(),
-      ...urea.keys(),
       ...celulas.keys(),
       ...bacterias.keys(),
     ]);
 
     return [...months]
-      .sort((a, b) => a.localeCompare(b))
+      .sort((a, b) => b.localeCompare(a))
       .map((month) => ({
         month,
         label: formatMonthLabel(month),
@@ -220,15 +224,11 @@ export default function Resumen() {
         entregas: entregas.get(month) ?? null,
         grasa: grasa.get(month) ?? null,
         proteina: proteina.get(month) ?? null,
-        lactosa: lactosa.get(month) ?? null,
         solidos: solidos.get(month) ?? null,
-        fpd: fpd.get(month) ?? null,
-        caseina: caseina.get(month) ?? null,
-        urea: urea.get(month) ?? null,
         celulas: celulas.get(month) ?? null,
         bacterias: bacterias.get(month) ?? null,
       }));
-  }, [remisiones, calidad, calidadSan]);
+  }, [allRemisiones, allCalidad, allCalidadSan]);
 
   const indicadores = [
     { icon: '🥛', name: 'Litros', u: fmtL(ultima.litros), p: fmtL(promedio.litros) },
@@ -302,7 +302,7 @@ export default function Resumen() {
         </div>
         <div className="table-wrap">
           {resumenMensual.length === 0 ? (
-            <div className="empty-state">No hay datos para el período seleccionado.</div>
+            <div className="empty-state">No hay datos históricos.</div>
           ) : (
             <table>
               <thead>
@@ -312,11 +312,7 @@ export default function Resumen() {
                   <th className="num">Entregas</th>
                   <th className="num">Grasa %</th>
                   <th className="num">Proteína %</th>
-                  <th className="num">Lactosa %</th>
                   <th className="num">Sólidos %</th>
-                  <th className="num">Pto. cong.</th>
-                  <th className="num">Caseína %</th>
-                  <th className="num">Urea</th>
                   <th className="num">Células</th>
                   <th className="num">Bacterias</th>
                 </tr>
@@ -329,11 +325,7 @@ export default function Resumen() {
                     <td className="num">{fmtN(r.entregas)}</td>
                     <td className="num">{fmtN(r.grasa)}</td>
                     <td className="num">{fmtN(r.proteina)}</td>
-                    <td className="num">{fmtN(r.lactosa)}</td>
                     <td className="num">{fmtN(r.solidos)}</td>
-                    <td className="num">{fmtN(r.fpd)}</td>
-                    <td className="num">{fmtN(r.caseina)}</td>
-                    <td className="num">{fmtN(r.urea)}</td>
                     <td className="num">{fmtN(r.celulas)}</td>
                     <td className="num">{fmtN(r.bacterias)}</td>
                   </tr>
