@@ -1,0 +1,20 @@
+﻿# Evita que el agente indexe/lea carpetas pesadas o irrelevantes.
+node_modules/
+.git/
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+dist/
+build/
+*.egg-info/
+
+*.log
+npm-debug.log*
+
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
